@@ -64,11 +64,22 @@ source venv312/bin/activate      # macOS / Linux
 
 ### 2. Install Dependencies
 
+Core dependencies (needed regardless of hosting):
+
 ```bash
-pip install mlx mlx-vlm torch torchvision Pillow transformers accelerate \
-            huggingface_hub python-dotenv openai google-genai
-pip install ollama   # optional: only for the Ollama functions in model_cache.py
+pip install torch torchvision Pillow transformers accelerate huggingface_hub python-dotenv
 ```
+
+Then add the client SDK(s) for the hosting(s) you'll actually use:
+
+```bash
+pip install openai        # openai, gemini_oai, ollama, mlx_vlm, vllm hostings
+pip install google-genai  # gemini, gemini_vtx hostings
+pip install ollama        # optional: only for the Ollama functions in model_cache.py
+```
+
+`mlx`/`mlx-vlm` and `vllm` are only needed on the machine *serving* a model that
+way (`python -m mlx_vlm.server` / `vllm serve`) — see [Set Up a Local Backend](#4-set-up-a-local-backend-optional) below.
 
 ### 3. Configure API Keys
 

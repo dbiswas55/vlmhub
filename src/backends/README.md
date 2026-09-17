@@ -13,7 +13,7 @@ This project can talk to a model through a cloud API or something running on you
 
 ## Python Environment
 
-Needed regardless of which option above you pick. Create and activate a virtual environment:
+Create and activate a virtual environment:
 
 ```bash
 python3 -m venv venv312
@@ -21,13 +21,21 @@ source venv312/bin/activate                  # macOS / Linux
 venv312\Scripts\activate                     # Windows
 ```
 
-Install all dependencies:
+Install the core dependencies, needed regardless of hosting:
 
 ```bash
-pip install mlx mlx-vlm torch torchvision Pillow transformers accelerate \
-            huggingface_hub python-dotenv openai google-genai
-pip install ollama                           # optional: only for the Ollama functions in model_cache.py
+pip install torch torchvision Pillow transformers accelerate huggingface_hub python-dotenv
 ```
+
+Then add the client SDK(s) for the hosting(s) you'll actually use:
+
+| Hosting(s) | Install |
+|---|---|
+| `openai`, `gemini_oai`, `ollama`, `mlx_vlm`, `vllm` | `pip install openai` — one client library for every OpenAI-compatible endpoint, local or cloud |
+| `gemini`, `gemini_vtx` | `pip install google-genai` — native Gemini SDK |
+| — (`model_cache.py`'s Ollama functions) | `pip install ollama` — optional; only needed to list/download/delete models in Ollama's own store, not to call a running Ollama server |
+
+`mlx`/`mlx-vlm` and `vllm` are **not** client-side packages — they're only for the machine that *serves* a model that way (`python -m mlx_vlm.server` / `vllm serve`, see below). A client pointed at either server needs only `openai`, above.
 
 Configure environment — create a `.env` file at the project root:
 

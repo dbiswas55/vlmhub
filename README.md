@@ -66,7 +66,8 @@ source venv312/bin/activate      # macOS / Linux
 
 ```bash
 pip install mlx mlx-vlm torch torchvision Pillow transformers accelerate \
-            huggingface_hub python-dotenv openai google-genai ollama
+            huggingface_hub python-dotenv openai google-genai
+pip install ollama   # optional: only for the Ollama functions in model_cache.py
 ```
 
 ### 3. Configure API Keys

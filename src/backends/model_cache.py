@@ -7,12 +7,13 @@ Full backend setup guide (venv, Ollama, MLX-VLM, vLLM): see README.md in this
 directory. Run this script directly to inspect, download into, and prune both
 stores:
     python src/backends/model_cache.py
+
+`ollama` is an optional import, needed only for the Ollama functions.
 """
 
 import os
 from dotenv import load_dotenv
 from huggingface_hub import login, snapshot_download, scan_cache_dir
-import ollama
 
 # Load HF_TOKEN and HF_HOME from .env before any huggingface_hub calls
 load_dotenv()
@@ -100,8 +101,21 @@ def delete_hf_cache_model_interactive():
 
 # ── Ollama Store ──────────────────────────────────────────────────────────────
 
+def _ollama():
+    """Lazy-import the optional `ollama` package; None (with a message) if missing."""
+    try:
+        import ollama
+        return ollama
+    except ImportError:
+        print("Skipping Ollama: pip install ollama")
+        return None
+
+
 def list_ollama_cache_models():
     """List all models in Ollama's local store with their sizes."""
+    ollama = _ollama()
+    if not ollama:
+        return
     models = ollama.list().models
     if not models:
         print("No models found in Ollama.")
@@ -122,6 +136,9 @@ def list_ollama_cache_models():
 
 def download_ollama_model(model_ids: str | list[str]):
     """Download one or more models into Ollama's local store, printing progress."""
+    ollama = _ollama()
+    if not ollama:
+        return
     if isinstance(model_ids, str):
         model_ids = [model_ids]
     for model_id in model_ids:
@@ -134,6 +151,9 @@ def download_ollama_model(model_ids: str | list[str]):
 
 def delete_ollama_cache_model(model_id: str):
     """Delete a specific model from Ollama's local store by name."""
+    ollama = _ollama()
+    if not ollama:
+        return
     if model_id not in {m.model for m in ollama.list().models}:
         print(f"Model '{model_id}' not found in Ollama.")
         return

@@ -25,7 +25,8 @@ Install all dependencies:
 
 ```bash
 pip install mlx mlx-vlm torch torchvision Pillow transformers accelerate \
-            huggingface_hub python-dotenv openai google-genai ollama
+            huggingface_hub python-dotenv openai google-genai
+pip install ollama                           # optional: only for the Ollama functions in model_cache.py
 ```
 
 Configure environment — create a `.env` file at the project root:

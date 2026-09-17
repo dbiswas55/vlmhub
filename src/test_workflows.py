@@ -46,7 +46,7 @@ Configuration
   Top-level constants (edit directly in this file):
     WORKFLOW    — workflow key in configs/experiment.json (prompts.workflows)
     CLIENT_NAME — override the active client, e.g. "ollama/gemma3-4b", or "" for default
-    DATASET     — dataset key in configs/experiment.json (datasets → <DATASET>.root_dir;
+    DATASET     — dataset key in configs/experiment.json (datasets → <DATASET>.input_dir;
                   add "output_dir" there to save per-item results, else nothing is saved)
     DEBUG       — if True, write per-step payload snapshots to DEBUG_DIR
 
@@ -92,16 +92,16 @@ def build_work_queue(dataset: dict, project_dir: Path) -> list[dict]:
     A work item is one unit the workflow runs over — here ``{"item_id",
     "images"}``. ``item_id`` must be unique per item: it names that item's
     saved output file (see run_pipeline). This demo dataset is a flat folder
-    of images, so its whole root_dir becomes a single item named after the
+    of images, so its whole input_dir becomes a single item named after the
     dataset. A real task swaps this function for a loader that reads the
     dataset's own metadata/manifest and yields many items (with a unique
     item_id each, in whatever shape that task's payload builder expects);
     the rest of the pipeline is unaffected.
     """
-    root_dir = project_dir / dataset["root_dir"]
-    images = sorted(p for p in root_dir.iterdir() if p.suffix.lower() in IMAGE_EXTENSIONS) if root_dir.is_dir() else []
+    input_dir = project_dir / dataset["input_dir"]
+    images = sorted(p for p in input_dir.iterdir() if p.suffix.lower() in IMAGE_EXTENSIONS) if input_dir.is_dir() else []
     if not images:
-        print(f"WARN: no images found in {root_dir.resolve()}")
+        print(f"WARN: no images found in {input_dir.resolve()}")
         return []
     return [{"item_id": dataset["name"], "images": images}]
 
@@ -190,7 +190,7 @@ def dump_payload_debug(payload: dict, step: dict, item_id: str, debug_dir: Path)
         "─" * 72,
     ]
     for block in payload["content"]:
-        lines.append(f"[IMAGE: {Path(block.path).name}]" if isinstance(block, ImageBlock) else block.text)
+        lines.append(f"[IMAGE: {block.label}]" if isinstance(block, ImageBlock) else block.text)
 
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -312,7 +312,7 @@ def run_pipeline(
 
     work_items = build_work_queue(dataset, cfg.project_dir)
 
-    print(f"Dataset  : {dataset_name}  ({dataset['root_dir']})")
+    print(f"Dataset  : {dataset_name}  ({dataset['input_dir']})")
     print(f"Workflow : {workflow}  ({num_steps} step{'s' if num_steps > 1 else ''})")
     print(f"Client   : {client['hosting']}/{client['name']}  ->  {client['model_id']}")
     print(f"Output   : {out_dir if out_dir is not None else '(not saving — no output_dir configured)'}")

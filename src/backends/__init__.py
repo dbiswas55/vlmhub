@@ -49,6 +49,9 @@ def get_backend_from_config(client: dict) -> BaseBackend:
             hf_token=_hf_token,
             hf_cache=_hf_home,
             quantization_level=client.get("quantization_level"),
+            fallback_dtype=client.get("fallback_dtype"),
+            model_class=client.get("model_class"),
+            processor_kwargs=client.get("processor_kwargs"),
         )
 
     raise ValueError(

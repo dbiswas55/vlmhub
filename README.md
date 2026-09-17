@@ -1,31 +1,31 @@
 # VLM-Inferences
 
-A lightweight, unified framework for **Vision-Language Model (VLM) inference** that lets you switch between local and cloud-hosted models with a single config change. Run multimodal prompts — interleaved text and images — against Ollama, MLX-VLM, vLLM, HuggingFace Transformers, Gemini, OpenAI, or Anthropic without rewriting any inference code.
+A lightweight, unified framework for **Vision-Language Model (VLM) inference** that lets you switch between local and cloud-hosted models with a single config change. Run multimodal prompts — interleaved text and images — against Ollama, MLX-VLM, vLLM, HuggingFace Transformers, Gemini, or OpenAI without rewriting any inference code.
 
 ## Key Features
 
 - **Unified inference interface** — one `InferenceRequest` with `TextBlock` and `ImageBlock` works across every backend.
-- **Multiple backends, one config** — swap between 7 hosting providers (local and cloud) by editing a JSON file.
+- **Multiple backends, one config** — swap between 8 hostings (local and cloud) by editing a JSON file.
 - **Interleaved multimodal content** — freely mix text segments and local images in any order within a single request.
 - **Structured JSON configuration** — all models, parameters, datasets, and prompt workflows live in a single, readable config file.
 - **Extensible workflow system** — define multi-step prompt workflows (e.g. chain-of-thought) in config with external prompt templates.
 - **Lazy-loaded clients** — backend SDKs and models are only loaded when first used, keeping startup fast.
-- **HuggingFace model management** — built-in helpers to download, list, and delete cached models.
+- **Local model management** — built-in helpers to download, list, and delete models in the HuggingFace cache and Ollama's store.
 
 ## Supported Backends
 
 | Category | Backend | Hosting Key | How it runs |
 |---|---|---|---|
 | **Cloud API** | Google Gemini (native SDK) | `gemini` | API call via `google-genai` |
-| **Cloud API** | Google Gemini (OpenAI-compat) | `gemini_compat` | OpenAI-compatible endpoint |
+| **Cloud API** | Google Gemini via Vertex AI | `gemini_vtx` | Native SDK, Application Default Credentials |
+| **Cloud API** | Google Gemini (OpenAI-compat) | `gemini_oai` | OpenAI-compatible endpoint |
 | **Cloud API** | OpenAI | `openai` | GPT-4o, GPT-4o-mini |
-| **Cloud API** | Anthropic | `anthropic` | Claude via OpenAI-compatible endpoint |
 | **Local Server** | Ollama | `ollama` | Local server on port 11434 |
 | **Local Server** | MLX-VLM | `mlx_vlm` | Apple Silicon, port 8080 |
 | **Local Server** | vLLM | `vllm` | CUDA GPU, port 8000 |
 | **In-Process** | HuggingFace Transformers | `transformers` | Direct model loading (CUDA / MPS / CPU) |
 
-Pre-configured models include **Gemma 3** (4B, 12B) and **Qwen3-VL** (4B, 8B) across all local backends, plus Gemini and GPT-4o for cloud.
+Pre-configured models include **Gemma 3** (4B, 12B) and **Qwen3-VL** (4B, 8B) across all local backends — plus Qwen2.5-VL, InternVL3.5, mPLUG-Owl3, Molmo2, Idefics3 and LLaVA-OneVision under `transformers` — and Gemini (2.5 / 3.x) and GPT-4o for cloud.
 
 ## Project Structure
 
@@ -42,11 +42,11 @@ VLM-Inferences/
 │   ├── backends/
 │   │   ├── __init__.py          # Backend factory (get_backend_from_config)
 │   │   ├── backends.py          # BaseBackend, GeminiBackend, OpenAIBackend, TransformersBackend
-│   │   └── request.py           # TextBlock, ImageBlock, InferenceRequest
+│   │   ├── request.py           # TextBlock, ImageBlock, InferenceRequest
+│   │   ├── model_cache.py       # List / download / delete HF-cache and Ollama models
+│   │   └── README.md            # Backend setup guide
 │   ├── utils/
 │   │   └── config.py            # Config loader with structured accessors
-│   ├── prepare/
-│   │   └── prepare_backends.py  # Backend setup guide + HuggingFace model management
 │   └── prompts/                 # Prompt template files (referenced by workflows)
 ├── README.md
 └── .env                         # API keys and HF token (not committed)
@@ -66,7 +66,7 @@ source venv312/bin/activate      # macOS / Linux
 
 ```bash
 pip install mlx mlx-vlm torch torchvision Pillow transformers accelerate \
-            huggingface_hub python-dotenv openai google-genai
+            huggingface_hub python-dotenv openai google-genai ollama
 ```
 
 ### 3. Configure API Keys
@@ -78,7 +78,6 @@ HF_TOKEN=hf_your_token_here       # huggingface.co/settings/tokens
 HF_HOME=.cache/huggingface         # optional custom cache path
 GEMINI_API_KEY=...                 # for Gemini backend
 OPENAI_API_KEY=...                 # for OpenAI backend
-ANTHROPIC_API_KEY=...              # for Anthropic backend
 ```
 
 ### 4. Set Up a Local Backend (Optional)
@@ -104,7 +103,7 @@ pip install vllm
 vllm serve Qwen/Qwen3-VL-4B-Instruct --port 8000
 ```
 
-See [`src/prepare/prepare_backends.py`](src/prepare/prepare_backends.py) for the full setup guide and HuggingFace model download utilities.
+See [`src/backends/README.md`](src/backends/README.md) for the full setup guide, and [`src/backends/model_cache.py`](src/backends/model_cache.py) for model download utilities.
 
 ### 5. Run Inference
 
@@ -154,14 +153,16 @@ All settings live in [`configs/experiment.json`](configs/experiment.json). The s
           // ...
         ]
       },
-      // gemini, openai, anthropic, mlx_vlm, vllm, transformers ...
+      // gemini, gemini_vtx, gemini_oai, openai, mlx_vlm, vllm, transformers ...
     }
   },
-  "processing": { "batch_size": 1, "output_format": "jsonl" },
+  "tasks": {
+    // optional per-script defaults; each names its dataset → Config.get_task_params(<task>)
+  },
   "datasets": {
     "demo_images": {
       "name": "demo_images",
-      "root_dir": "input/images",     // images to process, relative to project root
+      "input_dir": "input/images",    // images to process, relative to project root
       "output_dir": "output/demo_images"  // where results are saved (omit to skip saving)
     }
   },
@@ -180,6 +181,10 @@ All settings live in [`configs/experiment.json`](configs/experiment.json). The s
 ```
 
 **Selecting a client** — either set `models.active` in the config, or specify `CLIENT_NAME = "hosting/model"` in code. Model-level fields override hosting-level fields, which override `defaults`.
+
+**Transformers models** take extra per-model fields — `fallback_dtype`, and optionally `model_class` and `processor_kwargs` — described in [`src/backends/README.md`](src/backends/README.md#transformers).
+
+**Prompt paths** may contain a `{version}` placeholder (e.g. `summary/basic_{version}.txt`), filled by `cfg.get_step_text(workflow, step, "user", version="v1")`.
 
 ### Workflows
 
@@ -219,9 +224,9 @@ from backends.request import TextBlock, ImageBlock, InferenceRequest
 
 request = InferenceRequest(
     content=[
-        ImageBlock("input/images/slide_1.png"),
+        ImageBlock(image_path="input/images/slide_1.png"),
         TextBlock("What does this diagram show?"),
-        ImageBlock("input/images/slide_2.png"),
+        ImageBlock(image_path="input/images/slide_2.png"),
         TextBlock("How does this compare to the previous slide?"),
     ],
     system_prompt="You are a helpful assistant.",
@@ -231,30 +236,28 @@ request = InferenceRequest(
 )
 ```
 
-Images are automatically encoded (base64 data URI for OpenAI-compatible backends, raw bytes for Gemini, PIL for Transformers). You compose the content sequence however you like — the backend handles the rest.
+Images are automatically encoded (base64 data URI for OpenAI-compatible backends, raw bytes for Gemini, PIL for Transformers). You compose the content sequence however you like — the backend handles the rest. An in-memory PIL image (e.g. a decoded video frame) can be passed as `ImageBlock(image=frame)`; it is sent as PNG.
 
-## HuggingFace Model Management
+## Local Model Management
 
-The prepare script doubles as a model manager:
+[`src/backends/model_cache.py`](src/backends/model_cache.py) manages both the HuggingFace cache and Ollama's store:
 
 ```bash
-python src/prepare/prepare_backends.py
+python src/backends/model_cache.py
 ```
-
-Available functions:
 
 | Function | Description |
 |---|---|
-| `download_model(model_id)` | Download a model to the HF cache |
-| `list_cached_models()` | List all cached models with sizes |
-| `delete_cached_model(model_id)` | Delete a specific model |
-| `delete_cached_model_interactive()` | Interactive picker to delete models |
+| `list_hf_cache_models()` / `list_ollama_cache_models()` | List models with sizes |
+| `download_hf_model(ids)` / `download_ollama_model(ids)` | Download one model or a list |
+| `delete_hf_cache_model(id)` / `delete_ollama_cache_model(id)` | Delete a specific model |
+| `delete_hf_cache_model_interactive()` / `delete_ollama_cache_model_interactive()` | Interactive picker to delete models |
 
 ## Adding a New Backend
 
 1. Add a hosting entry in `configs/experiment.json` under `models.hostings`.
 2. If the service speaks the OpenAI chat completions API, set `"backend": "openai"` — no code changes needed.
-3. For a custom protocol, subclass `BaseBackend` in `src/backends/backends.py`, implement `run(request) -> str`, and register it in `src/backends/__init__.py`.
+3. For a custom protocol, subclass `BaseBackend` in `src/backends/backends.py`, implement `run(request) -> dict` (returning `{"text": str, "logs": list[str]}`), and register it in `src/backends/__init__.py`.
 
 ## License
 

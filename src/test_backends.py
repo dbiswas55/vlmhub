@@ -31,7 +31,7 @@ from backends.request import TextBlock, ImageBlock, InferenceRequest
 
 
 # ── Top-level constants — edit these to control the request ─────────────────
-# Available hostings : gemini, gemini_vtx, gemini_oai, openai, anthropic, ollama, mlx_vlm, vllm, transformers
+# Available hostings : gemini, gemini_vtx, gemini_oai, openai, ollama, mlx_vlm, vllm, transformers
 # Available models   : gemma3-4b, gemma3-12b, qwen3vl-4b, qwen3vl-8b, flash-2.5, flash-2.5lite
 # Example client names : "ollama/gemma3-4b", "transformers/gemma3-4b", "transformers/qwen3vl-4b", "vllm/gemma3-12b", "gemini/flash-2.5", "gemini_vtx/flash-2.5"
 

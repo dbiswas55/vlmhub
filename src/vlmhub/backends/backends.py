@@ -1,4 +1,4 @@
-"""All inference backends — BaseBackend, GeminiBackend, OpenAIBackend, TransformersBackend."""
+"""All inference backends — BaseBackend, LiteLLMBackend, TransformersBackend."""
 
 from __future__ import annotations
 
@@ -48,140 +48,69 @@ class BaseBackend(ABC):
         ...
 
 
-# ── Gemini ────────────────────────────────────────────────────────────────────
+# ── LiteLLM (any API-hosted model) ────────────────────────────────────────────
 
-class GeminiBackend(BaseBackend):
-    """Native Gemini inference via google-genai SDK."""
+class LiteLLMBackend(BaseBackend):
+    """Any API-hosted model, routed through LiteLLM's unified completion().
+
+    Covers what GeminiBackend and OpenAIBackend used to split between:
+    native Gemini/Vertex AI, OpenAI, and any OpenAI-compatible server
+    (Ollama, MLX-VLM, vLLM) — one class, config decides which.
+    """
 
     def __init__(
         self,
         name: str,
-        model_id: str,
-        api_key: str | None,
+        litellm_model: str,           # e.g. "vertex_ai/gemini-3.1-pro-preview",
+                                      #      "hosted_vllm/google/gemma-3-12b-it",
+                                      #      "openai/gemma3:4b"
+        api_base: str | None = None,
+        api_key: str | None = None,
         thinking_budget: int | None = None,
-        vertexai_project: str | None = None,
-        vertexai_location: str | None = None,
+        vertex_project: str | None = None,
+        vertex_location: str | None = None,
     ):
-        use_vertexai = bool(vertexai_project and vertexai_location)
-        if not use_vertexai and not api_key:
-            raise ValueError(f"[{name}] GEMINI_API_KEY is not set. Add it to your .env file.")
-
         self.name = name
-        self.model_id = model_id
+        self.litellm_model = litellm_model
+        self._api_base = api_base
         self._api_key = api_key
         self._thinking_budget = thinking_budget
-        self._use_vertexai = use_vertexai
-        self._vertexai_project = vertexai_project
-        self._vertexai_location = vertexai_location
-        self._client = None
-
-    def _ensure_client(self) -> None:
-        """Lazy-load the Gemini client on first use."""
-        if self._client is None:
-            from google import genai
-            if not self._use_vertexai:
-                self._client = genai.Client(api_key=self._api_key)
-            else:
-                self._client = genai.Client(
-                    vertexai=True,
-                    project=self._vertexai_project,
-                    location=self._vertexai_location,
-                )
+        self._vertex_project = vertex_project
+        self._vertex_location = vertex_location
 
     def run(self, request: InferenceRequest) -> dict:
-        """Generate text output from a multimodal request."""
-        from google.genai import types as genai_types
-        self._ensure_client()
-        parts: list[genai_types.Part] = []
+        """Generate text output via LiteLLM's unified completion API."""
+        from litellm import completion
 
-        for block in request.content:
-            if isinstance(block, TextBlock):
-                parts.append(genai_types.Part.from_text(text=block.text))
-            elif isinstance(block, ImageBlock):
-                parts.append(
-                    genai_types.Part.from_bytes(
-                        data=block.read_bytes(),
-                        mime_type=block.mime_type(),
-                    )
-                )
-
-        config_kwargs = {
+        kwargs: dict = {
+            "model": self.litellm_model,
+            "messages": request.to_openai_messages(),
             "temperature": request.temperature,
             "top_p": request.top_p,
-            "system_instruction": request.system_prompt or None,
         }
+        if self._api_base:
+            kwargs["api_base"] = self._api_base
+        if self._api_key:
+            kwargs["api_key"] = self._api_key
+        if self._vertex_project:
+            kwargs["vertex_project"] = self._vertex_project
+        if self._vertex_location:
+            kwargs["vertex_location"] = self._vertex_location
         if request.max_new_tokens is not None:
-            config_kwargs["max_output_tokens"] = request.max_new_tokens
+            kwargs["max_tokens"] = request.max_new_tokens
         if self._thinking_budget is not None:
-            config_kwargs["thinking_config"] = genai_types.ThinkingConfig(
-                thinking_budget=self._thinking_budget
-            )
-        config = genai_types.GenerateContentConfig(**config_kwargs)
-        response = self._client.models.generate_content(
-            model=self.model_id, contents=parts, config=config,
-        )
+            # Native param, not reasoning_effort — sidesteps mapping bugs
+            # seen on some vertex_ai/gemini model+version combinations.
+            kwargs["thinking"] = {"type": "enabled", "budget_tokens": self._thinking_budget}
+
+        response = completion(**kwargs)
         logs: list[str] = []
-        usage = response.usage_metadata
+        usage = getattr(response, "usage", None)
         if usage is not None:
-            thinking = getattr(usage, "thoughts_token_count", None)
-            logs.append(
-                f"USAGE prompt={usage.prompt_token_count} "
-                f"output={usage.candidates_token_count} "
-                f"total={usage.total_token_count} "
-                f"thinking={thinking}"
-            )
-        return {"text": response.text, "logs": logs}
-
-
-# ── OpenAI-compatible ─────────────────────────────────────────────────────────
-
-class OpenAIBackend(BaseBackend):
-    """Any service that speaks the OpenAI chat completions API.
-
-    Works with: OpenAI, Gemini (compat), Ollama, MLX-VLM, vLLM.
-    Lazy-loads the OpenAI client on first run().
-    """
-
-    def __init__(self, name: str, model_id: str, base_url: str, api_key: str | None):
-        if not base_url:
-            raise ValueError(f"[{name}] base_url is required for OpenAI-compatible backend.")
-        self.name = name
-        self.model_id = model_id
-        self._base_url = base_url
-        self._api_key = api_key
-        self._client = None
-
-    def _ensure_client(self) -> None:
-        """Lazy-load the OpenAI client on first use."""
-        if self._client is None:
-            from openai import OpenAI
-            self._client = OpenAI(base_url=self._base_url, api_key=self._api_key)
-
-    def run(self, request: InferenceRequest) -> dict:
-        """Generate text output via OpenAI-compatible chat completions."""
-        self._ensure_client()
-        content: list[dict] = []
-        for block in request.content:
-            if isinstance(block, TextBlock):
-                content.append({"type": "text", "text": block.text})
-            elif isinstance(block, ImageBlock):
-                content.append({"type": "image_url", "image_url": {"url": block.as_data_uri()}})
-
-        messages: list[dict] = []
-        if request.system_prompt:
-            messages.append({"role": "system", "content": request.system_prompt})
-        messages.append({"role": "user", "content": content})
-
-        creation_kwargs = {
-            "model": self.model_id,
-            "messages": messages,
-            "temperature": request.temperature,
-            "top_p": request.top_p,
-        }
-        if request.max_new_tokens is not None:
-            creation_kwargs["max_tokens"] = request.max_new_tokens
-        response = self._client.chat.completions.create(**creation_kwargs)
-        return {"text": response.choices[0].message.content, "logs": []}
+            logs.append(f"USAGE prompt={usage.prompt_tokens} "
+                        f"output={usage.completion_tokens} "
+                        f"total={usage.total_tokens}")
+        return {"text": response.choices[0].message.content, "logs": logs}
 
 
 # ── Transformers (in-process) ─────────────────────────────────────────────────
@@ -190,7 +119,7 @@ class TransformersBackend(BaseBackend):
     """Local in-process inference via HuggingFace Transformers.
 
     A model is described entirely by its entry under the "transformers" hosting in
-    configs/experiment.json. Four of those fields shape how it loads:
+    models.json. Four of those fields shape how it loads:
 
       model_class         the transformers auto-class to load through, defaulting
                           to AutoModelForImageTextToText.
@@ -332,7 +261,7 @@ class TransformersBackend(BaseBackend):
             raise ValueError(
                 f"[{self.name}] model_class '{self.model_class}' is not a class in the "
                 f"installed transformers ({transformers.__version__}). Check the spelling "
-                f"in configs/experiment.json, or omit it to use {_DEFAULT_MODEL_CLASS}."
+                f"in models.json, or omit it to use {_DEFAULT_MODEL_CLASS}."
             )
         return cls
 

@@ -1,7 +1,0 @@
-Describe each image below in 3–5 sentences: main subject, key information or visual elements, and any notable highlights. Address the images in order, labelling each description "Image 1:", "Image 2:", etc.
-
-{images}
-
-Be concise and factual — this will feed into a later summarisation step.
-
-Output only the descriptions — no preamble, sign-off, or offers of further help.

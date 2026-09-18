@@ -1,0 +1,31 @@
+[project]
+name = "vlmhub"
+version = "0.1.0"
+description = "A lightweight, config-driven framework for unified vision-language model inference across local and cloud backends."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+dependencies = [
+    "torch",
+    "torchvision",
+    "Pillow",
+    "transformers",
+    "accelerate",
+    "huggingface_hub",
+    "python-dotenv",
+    "litellm",
+]
+
+[project.optional-dependencies]
+quantization = ["bitsandbytes"]
+ollama = ["ollama"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+vlmhub = ["models.json", "backends/README.md"]

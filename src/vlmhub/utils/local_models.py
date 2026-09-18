@@ -3,10 +3,10 @@ by HuggingFace (used by MLX-VLM, vLLM, and Transformers) and by Ollama.
 The two stores are independent (different directories, different formats);
 this file just gives them a matching set of functions.
 
-Full backend setup guide (venv, Ollama, MLX-VLM, vLLM): see README.md in this
-directory. Run this script directly to inspect, download into, and prune both
-stores:
-    python src/backends/model_cache.py
+Full backend setup guide (venv, Ollama, MLX-VLM, vLLM): see
+../backends/README.md. Run this file directly to inspect, download into, and
+prune both stores:
+    python src/vlmhub/utils/local_models.py
 
 `ollama` is an optional import, needed only for the Ollama functions.
 """

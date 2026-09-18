@@ -7,6 +7,9 @@
 # Virtual environment
 venv*/
 
+# Pre-refactor files kept locally for reference (still in git history)
+_archive/
+
 # Files and Folders to ignore
 input/
 output/
@@ -14,3 +17,6 @@ output/
 # Python
 __pycache__/
 *.py[cod]
+*.egg-info/
+build/
+dist/

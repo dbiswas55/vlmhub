@@ -1,7 +1,0 @@
-Individual image descriptions:
-
-{image_summaries}
-
-Using the descriptions above, write a cohesive final summary (2–4 paragraphs) covering the overarching topic, key takeaways, and any patterns across the images — suitable for someone who has not seen the images.
-
-Output only the summary — no preamble, sign-off, or offers of further help.

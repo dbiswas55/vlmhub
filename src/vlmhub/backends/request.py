@@ -105,3 +105,20 @@ class InferenceRequest:
 
     def image_blocks(self) -> list[ImageBlock]:
         return [b for b in self.content if isinstance(b, ImageBlock)]
+
+    def to_openai_messages(self) -> list[dict]:
+        """This request as an OpenAI-style messages list — what LiteLLM
+        (and any OpenAI-compatible client) expects. Centralized here so
+        every API-hosted backend builds it identically, once."""
+        content: list[dict] = []
+        for block in self.content:
+            if isinstance(block, TextBlock):
+                content.append({"type": "text", "text": block.text})
+            elif isinstance(block, ImageBlock):
+                content.append({"type": "image_url", "image_url": {"url": block.as_data_uri()}})
+
+        messages: list[dict] = []
+        if self.system_prompt:
+            messages.append({"role": "system", "content": self.system_prompt})
+        messages.append({"role": "user", "content": content})
+        return messages

@@ -143,21 +143,27 @@ class TransformersBackend(BaseBackend):
         model_class: str | None = None,
         processor_kwargs: dict | None = None,
     ):
+        # Required fields: fail fast, before anything is assigned or downloaded.
         if not hf_model_id:
             raise ValueError(f"[{name}] hf_model_id is required for Transformers backend.")
+        if not model_class:
+            raise ValueError(f"[{name}] model_class is required for Transformers backend.")
+
+        # Plain config: stored as given.
         self.name = name
         self.hf_model_id = hf_model_id
         self.hf_token = hf_token
         self.hf_cache = hf_cache
-        self.quantization_level = self._checked("quantization_level", quantization_level, _QUANTIZATION_LEVELS)
-        # Consulted only on a pre-Ampere GPU; see _pick_compute_dtype().
-        self.fallback_dtype = self._checked("fallback_dtype", fallback_dtype, _FALLBACK_DTYPES)
-        if not model_class:
-            raise ValueError(f"[{name}] model_class is required for Transformers backend.")
         self.model_class = model_class
         # Not interpreted here: each key is the processor's own setting.
         self.processor_kwargs = processor_kwargs or {}
 
+        # Validated config: checked against a known set of allowed values.
+        self.quantization_level = self._checked("quantization_level", quantization_level, _QUANTIZATION_LEVELS)
+        # Consulted only on a pre-Ampere GPU; see _pick_compute_dtype().
+        self.fallback_dtype = self._checked("fallback_dtype", fallback_dtype, _FALLBACK_DTYPES)
+
+        # Derived state: computed from the above, not passed in.
         self.device = self._pick_device()
         self._model = None
         self._processor = None

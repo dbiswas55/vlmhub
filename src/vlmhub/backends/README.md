@@ -173,9 +173,9 @@ A **hosting** is a named entry in `models.json` pairing a backend with connectio
 
 The factory joins `litellm_prefix` and `model_id` into LiteLLM's `"<provider>/<model>"` routing string, so any of [LiteLLM's providers](https://docs.litellm.ai/docs/providers) works here. Several hostings can share one backend — `openai`, `ollama`, `mlx_vlm` and `vllm` are all `litellm`, just pointed at different servers.
 
-For credentials: a real secret goes in `api_key_env` (naming an env var, e.g. `"MY_API_KEY"`). An `litellm_prefix: "openai"` hosting with a custom `api_base` and no `api_key_env` — a local OpenAI-compatible server, like `ollama`/`mlx_vlm` above — gets a harmless placeholder key automatically, since those servers want *a* token but don't check it. `api_key` is only for the rare server that wants a specific literal token instead.
+For credentials: a real secret goes in `api_key_env` (naming an env var, e.g. `"MY_API_KEY"`, filled in your `.env`). An `litellm_prefix: "openai"` hosting with a custom `api_base` and no `api_key_env` — a local OpenAI-compatible server, like `ollama`/`mlx_vlm` above — gets a harmless placeholder key automatically, since those servers want *a* token but don't check it.
 
-Recognized hosting keys: `litellm_prefix`, `api_base`, `api_key`, `api_key_env`, `thinking_budget`, `vertex_project_env`, `vertex_location_env`.
+Recognized hosting keys: `litellm_prefix`, `api_base`, `api_key_env`, `thinking_budget`, `vertex_project_env`, `vertex_location_env`.
 
 ## Adding a New Backend
 

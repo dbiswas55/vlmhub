@@ -90,10 +90,10 @@ class InferenceRequest:
     """
 
     content: list[ContentBlock]
-    system_prompt: str = ""
-    max_new_tokens: int = 4096
-    temperature: float = 1.0
-    top_p: float = 1.0
+    system_prompt: str
+    max_new_tokens: int
+    temperature: float
+    top_p: float
 
     @property
     def do_sample(self) -> bool:

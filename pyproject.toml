@@ -19,6 +19,7 @@ dependencies = [
 [project.optional-dependencies]
 quantization = ["bitsandbytes"]
 ollama = ["ollama"]
+samples = ["pyarrow"]
 
 [build-system]
 requires = ["setuptools>=68"]

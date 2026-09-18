@@ -6,7 +6,7 @@ vlmhub can talk to a model through a cloud API or something running on your own 
 
 | Your situation | Use | See |
 |---|---|---|
-| No local install, just an API key | `gemini` or `openai` | Cloud APIs |
+| No local install, just an API key | `gemini`, `openai`, or `anthropic` | Cloud APIs |
 | Local models on macOS | `ollama` (easiest) or `mlx_vlm` (faster on Apple Silicon) | Local Models |
 | Local models on CUDA / Linux | `vllm` (server, optimized for throughput) or `transformers` (in-process, no server) | Local Models |
 | Want to list, download/pull, or delete local models | — | Local Model Management |
@@ -25,8 +25,8 @@ pip install -e .
 
 That covers every hosting. Unlike the pre-LiteLLM layout, there are no
 per-hosting client SDKs to add: [LiteLLM](https://docs.litellm.ai) speaks to
-Gemini, Vertex AI, OpenAI and every OpenAI-compatible local server through one
-package, and it is a core dependency.
+Gemini, Vertex AI, OpenAI, Anthropic and every OpenAI-compatible local server
+through one package, and it is a core dependency.
 
 Two extras exist for things not everyone needs:
 
@@ -44,6 +44,7 @@ HF_TOKEN=hf_your_token_here    # huggingface.co/settings/tokens
 HF_HOME=.cache/huggingface     # optional; use absolute path on a cluster
 GEMINI_API_KEY=...             # for the gemini hosting
 OPENAI_API_KEY=...             # for the openai hosting
+ANTHROPIC_API_KEY=...          # for the anthropic hosting
 GCP_PROJECT=...                # for the vertex_ai hosting
 GCP_LOCATION=...               # for the vertex_ai hosting
 ```
@@ -65,6 +66,7 @@ No server, no local model files — just an API key (above) and a hosting choice
 - **`gemini`** — Gemini via Google AI Studio, on LiteLLM's native `gemini/` provider. Simplest option, and supports `thinking_budget`.
 - **`vertex_ai`** — the same Gemini models routed through Vertex AI (needs `GCP_PROJECT`/`GCP_LOCATION` and Application Default Credentials).
 - **`openai`** — OpenAI's own API.
+- **`anthropic`** — Anthropic's own API, on LiteLLM's native `anthropic/` provider.
 
 ## Local Models
 

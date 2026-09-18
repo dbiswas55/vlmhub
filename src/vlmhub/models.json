@@ -1,5 +1,5 @@
 {
-  "_comment": "The bundled model registry. Active client is selected by 'active.hosting' + 'active.model'; reference one in code as 'hosting/model'. Model-level fields override hosting-level fields, which override 'defaults'.",
+  "_comment": "Bundled model registry. 'active' picks the default client; reference any client in code as 'hosting/model'. Field precedence: model > hosting > defaults.",
 
   "active": {
     "hosting": "ollama",
@@ -14,10 +14,10 @@
 
   "hostings": {
 
-    "_comment_api": "── Cloud API providers (all routed through LiteLLM) ────────────",
+    "_comment_api": "── Cloud APIs ────────────────────────────────────────────────",
 
     "gemini": {
-      "_comment": "Gemini via Google AI Studio (API key), LiteLLM's native 'gemini/' provider — full feature access including thinking_budget.",
+      "_comment": "Google AI Studio, via LiteLLM's native 'gemini/' provider. Supports thinking_budget.",
       "backend": "litellm",
       "litellm_prefix": "gemini",
       "api_key_env": "GEMINI_API_KEY",
@@ -33,7 +33,7 @@
     },
 
     "vertex_ai": {
-      "_comment": "Same Gemini models routed through Vertex AI (uses Application Default Credentials).",
+      "_comment": "Same Gemini models via Vertex AI (Application Default Credentials).",
       "backend": "litellm",
       "litellm_prefix": "vertex_ai",
       "vertex_project_env": "GCP_PROJECT",
@@ -50,19 +50,33 @@
     },
 
     "openai": {
+      "_comment": "OpenAI's own API.",
       "backend": "litellm",
       "litellm_prefix": "openai",
       "api_key_env": "OPENAI_API_KEY",
       "models": [
         { "name": "gpt-4o",      "model_id": "gpt-4o" },
-        { "name": "gpt-4o-mini", "model_id": "gpt-4o-mini" }
+        { "name": "gpt-4o-mini", "model_id": "gpt-4o-mini" },
+        { "name": "gpt-4.1",     "model_id": "gpt-4.1" }
       ]
     },
 
-    "_comment_local": "── Local inference servers ─────────────────────────────────────",
+    "anthropic": {
+      "_comment": "Anthropic's own API, via LiteLLM's native 'anthropic/' provider.",
+      "backend": "litellm",
+      "litellm_prefix": "anthropic",
+      "api_key_env": "ANTHROPIC_API_KEY",
+      "models": [
+        { "name": "haiku-3",    "model_id": "claude-3-haiku-20240307" },
+        { "name": "sonnet-3.5", "model_id": "claude-3-5-sonnet-20241022" },
+        { "name": "sonnet-3.7", "model_id": "claude-3-7-sonnet-20250219" }
+      ]
+    },
+
+    "_comment_local": "── Local servers ─────────────────────────────────────────────",
 
     "ollama": {
-      "_comment": "Reached as an OpenAI-compatible server; no api_key needed, Ollama doesn't check one.",
+      "_comment": "OpenAI-compatible local server; no api_key needed.",
       "backend": "litellm",
       "litellm_prefix": "openai",
       "api_base": "http://localhost:11434/v1",
@@ -100,12 +114,12 @@
       ]
     },
 
-    "_comment_inproc": "── In-process inference (no server required) ───────────────────",
+    "_comment_inproc": "── In-process (no server) ───────────────────────────────────────",
 
     "transformers": {
-      "_comment_quantization": "quantization_level: null | '4bit' (NF4). Set '4bit' to quantize, which applies on CUDA only (ignored with a warning on MPS/CPU).",
-      "_comment_dtype": "All models here are native bfloat16. fallback_dtype is used on GPUs without native bfloat16 tensor cores (sm < 80); if fallback_dtype is null, bfloat16 is kept and runs emulated there.",
-      "_comment_processor": "processor_kwargs: extra arguments passed as-is to AutoProcessor.from_pretrained — list them only for a model that needs one. Idefics3: do_image_splitting=false stops each frame being upscaled to 1456px and cut into 17 tiles (~3000 -> ~175 tokens/frame).",
+      "_comment_quantization": "quantization_level: null (full precision) or '4bit' (NF4, CUDA only — ignored elsewhere).",
+      "_comment_dtype": "fallback_dtype: dtype for GPUs without native bfloat16 (sm < 80); null keeps bfloat16, emulated there (slow).",
+      "_comment_processor": "processor_kwargs: extra args passed to AutoProcessor.from_pretrained, only where needed. Idefics3: do_image_splitting=false skips upscaling/tiling each frame (~3000 -> ~175 tokens/frame).",
       "backend": "transformers",
       "quantization_level": null,
       "models": [

@@ -1,6 +1,6 @@
 # vlmhub
 
-A lightweight, config-driven framework for **unified vision-language model inference** across local and cloud backends. Run multimodal prompts — interleaved text and images — against Ollama, MLX-VLM, vLLM, HuggingFace Transformers, Gemini, Vertex AI, or OpenAI without rewriting any inference code.
+A lightweight, config-driven framework for **unified vision-language model inference** across local and cloud backends. Run multimodal prompts — interleaved text and images — against Ollama, MLX-VLM, vLLM, HuggingFace Transformers, Gemini, Vertex AI, OpenAI, or Anthropic without rewriting any inference code.
 
 ```python
 from vlmhub import Model, TextBlock, ImageBlock
@@ -18,7 +18,7 @@ Switching to Gemini, vLLM or a local Transformers model is the same two lines wi
 ## Key Features
 
 - **Unified inference interface** — one `Model.generate()` over `TextBlock` and `ImageBlock` works across every backend.
-- **Multiple hostings, one registry** — swap between 7 hostings (local and cloud) by changing a string.
+- **Multiple hostings, one registry** — swap between 8 hostings (local and cloud) by changing a string.
 - **Interleaved multimodal content** — freely mix text segments and images in any order within a single request.
 - **Two backends, not seven** — every API-hosted model goes through [LiteLLM](https://docs.litellm.ai); only in-process Transformers needs its own code path.
 - **Extensible registry** — point `models_path` at your own JSON to add models or hostings without forking the package.
@@ -31,13 +31,14 @@ Switching to Gemini, vLLM or a local Transformers model is the same two lines wi
 |---|---|---|---|---|
 | **Cloud API** | Google Gemini (AI Studio) | `gemini` | `litellm` | LiteLLM `gemini/` provider; supports `thinking_budget` |
 | **Cloud API** | Google Gemini via Vertex AI | `vertex_ai` | `litellm` | LiteLLM `vertex_ai/`, Application Default Credentials |
-| **Cloud API** | OpenAI | `openai` | `litellm` | GPT-4o, GPT-4o-mini |
+| **Cloud API** | OpenAI | `openai` | `litellm` | GPT-4o, GPT-4o-mini, GPT-4.1 |
+| **Cloud API** | Anthropic | `anthropic` | `litellm` | LiteLLM `anthropic/` provider |
 | **Local Server** | Ollama | `ollama` | `litellm` | Local server on port 11434 |
 | **Local Server** | MLX-VLM | `mlx_vlm` | `litellm` | Apple Silicon, port 8080 |
 | **Local Server** | vLLM | `vllm` | `litellm` | CUDA GPU, port 8000 |
 | **In-Process** | HuggingFace Transformers | `transformers` | `transformers` | Direct model loading (CUDA / MPS / CPU) |
 
-Pre-configured models include **Gemma 3** (4B, 12B) and **Qwen3-VL** (4B, 8B) across all local hostings — plus Qwen2.5-VL, InternVL3.5, mPLUG-Owl3, Molmo2, Idefics3 and LLaVA-OneVision under `transformers` — and Gemini (2.5 / 3.x) and GPT-4o for cloud.
+Pre-configured models include **Gemma 3** (4B, 12B) and **Qwen3-VL** (4B, 8B) across all local hostings — plus Qwen2.5-VL, InternVL3.5, mPLUG-Owl3, Molmo2, Idefics3 and LLaVA-OneVision under `transformers` — and Gemini (2.5 / 3.x), GPT-4o/4.1, and Claude 3.x for cloud.
 
 ## Project Structure
 
@@ -88,7 +89,7 @@ pip install -e ".[ollama]"         # only to manage Ollama's store via local_mod
 cp .env.example .env
 ```
 
-Then fill in only what you use — `GEMINI_API_KEY`, `OPENAI_API_KEY`, `GCP_PROJECT`/`GCP_LOCATION`, `HF_TOKEN`/`HF_HOME`. A purely local Ollama or vLLM setup needs none of them.
+Then fill in only what you use — `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GCP_PROJECT`/`GCP_LOCATION`, `HF_TOKEN`/`HF_HOME`. A purely local Ollama or vLLM setup needs none of them.
 
 ### 3. Set Up a Local Backend (Optional)
 
@@ -178,7 +179,7 @@ The model registry lives in [`src/vlmhub/models.json`](src/vlmhub/models.json), 
         // ...
       ]
     }
-    // gemini, vertex_ai, openai, mlx_vlm, vllm, transformers ...
+    // gemini, vertex_ai, openai, anthropic, mlx_vlm, vllm, transformers ...
   }
 }
 ```

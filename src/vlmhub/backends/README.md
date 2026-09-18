@@ -23,17 +23,18 @@ venv312\Scripts\activate                     # Windows
 pip install -e .
 ```
 
-That covers every hosting. Unlike the pre-LiteLLM layout, there are no
-per-hosting client SDKs to add: [LiteLLM](https://docs.litellm.ai) speaks to
-Gemini, Vertex AI, OpenAI, Anthropic and every OpenAI-compatible local server
-through one package, and it is a core dependency.
+That covers every hosting: there are no per-hosting client SDKs to add, because
+[LiteLLM](https://docs.litellm.ai) speaks to Gemini, Vertex AI, OpenAI, Anthropic
+and every OpenAI-compatible local server through one package, and it is a core
+dependency.
 
-Two extras exist for things not everyone needs:
+Three extras exist for things not everyone needs:
 
 | Extra | Install | What it is for |
 |---|---|---|
 | `quantization` | `pip install -e ".[quantization]"` | `bitsandbytes`, for `quantization_level: "4bit"` on CUDA under the `transformers` hosting |
 | `ollama` | `pip install -e ".[ollama]"` | the `ollama` Python package, needed only to list/download/delete models in Ollama's own store via `local_models.py` — **not** to call a running Ollama server |
+| `samples` | `pip install -e ".[samples]"` | `pyarrow`, needed only by the example scripts in `tests/`, which read dataset shards from the HuggingFace Hub |
 
 `mlx`/`mlx-vlm` and `vllm` are **not** client-side packages — they're only for the machine that *serves* a model that way (`python -m mlx_vlm.server` / `vllm serve`, see below). A client pointed at either server needs nothing extra.
 
@@ -142,7 +143,7 @@ Loads a model directly into the Python process — no server to install or run, 
 
 - **`fallback_dtype`** (per model) — every model here is native bfloat16, so that is the load dtype wherever the hardware supports it. Pre-Ampere GPUs (e.g. V100) don't, and this field decides what they use instead: `"float16"` where it has been verified safe, or `null` to keep bfloat16 and let the GPU emulate it — correct but slow. fp16 is not a universal substitute: bf16-trained models like Gemma-3 overflow it into NaN logits.
 - **`quantization_level`** (per hosting) — never automatic. `"4bit"` loads 4-bit NF4 on CUDA, ignored with a warning on MPS/CPU; `null` loads full precision. Being hosting-wide, it applies to every model in the run — reach for it when a model's weights won't fit the GPU. Needs the `quantization` extra.
-- **`model_class`** (per model, optional) — the transformers auto-class to load with; omitted means `AutoModelForImageTextToText`.
+- **`model_class`** (per model, required) — the transformers auto-class to load with: `AutoModelForImageTextToText` for most VLMs, or whatever class the model is registered under (mPLUG-Owl3 is an `AutoModelForCausalLM`). Loading fails fast if it is missing or misspelled.
 - **`processor_kwargs`** (per model, optional) — extra arguments passed as-is to `AutoProcessor.from_pretrained`.
 
 On CUDA, weights are placed with `device_map="auto"`, so a model too large for one card spreads across every visible GPU; set `CUDA_VISIBLE_DEVICES=0` to pin it to one.

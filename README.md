@@ -76,12 +76,13 @@ pip install -e .
 ```
 
 That covers every hosting — LiteLLM handles Gemini, Vertex AI, OpenAI, Anthropic and all
-OpenAI-compatible local servers, so there are no per-hosting SDKs to add. Two
+OpenAI-compatible local servers, so there are no per-hosting SDKs to add. Three
 optional extras:
 
 ```bash
 pip install -e ".[quantization]"   # bitsandbytes, for 4-bit loads under `transformers`
 pip install -e ".[ollama]"         # only to manage Ollama's store via local_models.py
+pip install -e ".[samples]"        # pyarrow, only for the example scripts in tests/
 ```
 
 ### 2. Configure API Keys
@@ -120,7 +121,8 @@ See [`src/vlmhub/backends/README.md`](src/vlmhub/backends/README.md) for the ful
 ### 4. Run Inference
 
 The scripts in [`tests/`](tests/) are both smoke tests and usage examples — each downloads a few real
-dataset samples, runs them through a client, and prints the output next to the ground truth:
+dataset samples, runs them through a client, and prints the output next to the ground truth.
+They need the `samples` extra (`pip install -e ".[samples]"`):
 
 ```bash
 python tests/test_captioning.py                                 # models.json's active client

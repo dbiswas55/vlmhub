@@ -12,6 +12,8 @@ prune both stores:
 """
 
 import os
+from types import ModuleType
+
 from dotenv import load_dotenv
 from huggingface_hub import login, snapshot_download, scan_cache_dir
 
@@ -21,7 +23,7 @@ load_dotenv()
 
 # ── HuggingFace Cache ─────────────────────────────────────────────────────────
 
-def list_hf_cache_models():
+def list_hf_cache_models() -> list | None:
     """List all models in the HF cache with their sizes."""
     cache_info = scan_cache_dir()
     repos = sorted(cache_info.repos, key=lambda r: r.size_on_disk, reverse=True)
@@ -43,12 +45,12 @@ def list_hf_cache_models():
     return repos
 
 
-def hf_login():
+def hf_login() -> None:
     """Interactive HF login — only needed for gated models not covered by HF_TOKEN in .env."""
     login()
 
 
-def download_hf_model(model_ids: str | list[str]):
+def download_hf_model(model_ids: str | list[str]) -> None:
     """Download one or more model repos into the local HF cache (HF_HOME)."""
     if isinstance(model_ids, str):
         model_ids = [model_ids]
@@ -58,7 +60,7 @@ def download_hf_model(model_ids: str | list[str]):
         print(f"Done: {model_id}")
 
 
-def delete_hf_cache_model(model_id: str):
+def delete_hf_cache_model(model_id: str) -> None:
     """Delete a specific model from the HF cache by repo id."""
     cache_info = scan_cache_dir()
     matches = [r for r in cache_info.repos if r.repo_id == model_id]
@@ -83,7 +85,7 @@ def delete_hf_cache_model(model_id: str):
     print(f"Deleted '{model_id}' from HF cache.")
 
 
-def delete_hf_cache_model_interactive():
+def delete_hf_cache_model_interactive() -> None:
     """Show cached HF models and prompt the user to pick one to delete, repeating until cancelled."""
     while True:
         repos = list_hf_cache_models()
@@ -101,17 +103,17 @@ def delete_hf_cache_model_interactive():
 
 # ── Ollama Store ──────────────────────────────────────────────────────────────
 
-def _ollama():
+def _ollama() -> ModuleType | None:
     """Lazy-import the optional `ollama` package; None (with a message) if missing."""
     try:
-        import ollama
+        import ollama  # type: ignore[import-not-found]  # optional extra; absent by design
         return ollama
     except ImportError:
         print("Skipping Ollama: pip install ollama")
         return None
 
 
-def list_ollama_cache_models():
+def list_ollama_cache_models() -> list | None:
     """List all models in Ollama's local store with their sizes."""
     ollama = _ollama()
     if not ollama:
@@ -134,7 +136,7 @@ def list_ollama_cache_models():
     return models
 
 
-def download_ollama_model(model_ids: str | list[str]):
+def download_ollama_model(model_ids: str | list[str]) -> None:
     """Download one or more models into Ollama's local store, printing progress."""
     ollama = _ollama()
     if not ollama:
@@ -149,7 +151,7 @@ def download_ollama_model(model_ids: str | list[str]):
         print(f"\nDone: {model_id}")
 
 
-def delete_ollama_cache_model(model_id: str):
+def delete_ollama_cache_model(model_id: str) -> None:
     """Delete a specific model from Ollama's local store by name."""
     ollama = _ollama()
     if not ollama:
@@ -167,7 +169,7 @@ def delete_ollama_cache_model(model_id: str):
     print(f"Deleted '{model_id}' from Ollama.")
 
 
-def delete_ollama_cache_model_interactive():
+def delete_ollama_cache_model_interactive() -> None:
     """Show local Ollama models and prompt the user to pick one to delete, repeating until cancelled."""
     while True:
         models = list_ollama_cache_models()

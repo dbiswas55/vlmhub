@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 
 import torch
 from PIL import Image
@@ -48,9 +49,10 @@ class BaseBackend(ABC):
 class LiteLLMBackend(BaseBackend):
     """Any API-hosted model, routed through LiteLLM's unified completion().
 
-    Covers what GeminiBackend and OpenAIBackend used to split between:
-    native Gemini/Vertex AI, OpenAI, and any OpenAI-compatible server
-    (Ollama, MLX-VLM, vLLM) — one class, config decides which.
+    One class for every wire-served hosting — Gemini, Vertex AI, OpenAI,
+    Anthropic, and any OpenAI-compatible server (Ollama, MLX-VLM, vLLM).
+    Which one it reaches is decided entirely by config: the "<provider>/<model>"
+    string in litellm_model, plus whichever of api_base/api_key/vertex_* apply.
     """
 
     def __init__(
@@ -171,7 +173,7 @@ class TransformersBackend(BaseBackend):
 
     # ── Config → load decisions (all resolved before any download) ───────────
 
-    def _checked(self, field: str, value: str | None, allowed) -> str | None:
+    def _checked(self, field: str, value: str | None, allowed: Iterable[str | None]) -> str | None:
         """Lower-case a config value and check it names something this backend knows."""
         value = value.lower() if value else None
         if value not in allowed:
@@ -182,14 +184,13 @@ class TransformersBackend(BaseBackend):
     @staticmethod
     def _pick_device() -> str:
         """Detect best available device: CUDA > MPS > CPU."""
-
         if torch.cuda.is_available():
             return "cuda"
         if torch.backends.mps.is_available():
             return "mps"
         return "cpu"
 
-    def _pick_compute_dtype(self):
+    def _pick_compute_dtype(self) -> torch.dtype:
         """Resolve the dtype to load the weights in.
 
         Every model served here is natively bfloat16: that is the dtype wherever
@@ -199,7 +200,6 @@ class TransformersBackend(BaseBackend):
         models like Gemma-3 overflow into NaN logits, or None to stay in bfloat16
         and let PyTorch emulate it: exact, same 2 bytes/param, but slow.
         """
-
         if self.device == "cpu":
             return torch.float32
         if self.device == "mps":
@@ -254,7 +254,7 @@ class TransformersBackend(BaseBackend):
             f"BitsAndBytesConfig to enable it."
         )
 
-    def _resolve_model_class(self):
+    def _resolve_model_class(self) -> type:
         """Look up this model's transformers auto-class by name."""
         import transformers
 

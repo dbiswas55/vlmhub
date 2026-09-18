@@ -50,4 +50,5 @@ class Model:
         return self.backend.run(request)
 
     def report(self) -> None:
+        """Print which client this is and the provider id it resolves to."""
         print(f"Client   : {self.name}  ->  {self.model_id}")

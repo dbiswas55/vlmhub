@@ -5,7 +5,10 @@ A lightweight, config-driven framework for **unified vision-language model infer
 ```python
 from vlmhub import Model, TextBlock, ImageBlock
 
-model = Model("ollama/gemma3-4b")
+model = Model("ollama/gemma3-4b")            # local server
+# model = Model("gemini/flash-3.5lite")      # cloud API
+# model = Model("transformers/qwen3vl-8b")   # in-process, no server
+
 reply = model.generate([
     ImageBlock(image_path="slide.png"),
     TextBlock("What does this diagram show?"),
@@ -13,17 +16,14 @@ reply = model.generate([
 print(reply["text"])
 ```
 
-Switching to Gemini, vLLM or a local Transformers model is the same two lines with a different client name.
+Switching between them is the same two lines with a different client name.
 
 ## Key Features
 
-- **Unified inference interface** — one `Model.generate()` over `TextBlock` and `ImageBlock` works across every backend.
-- **Multiple hostings, one registry** — swap between 8 hostings (local and cloud) by changing a string.
-- **Interleaved multimodal content** — freely mix text segments and images in any order within a single request.
-- **Two backends, not seven** — every API-hosted model goes through [LiteLLM](https://docs.litellm.ai); only in-process Transformers needs its own code path.
-- **Extensible registry** — point `models_path` at your own JSON to add models or hostings without forking the package.
-- **Lazy loading** — SDKs and model weights load on first use, keeping startup fast.
-- **Local model management** — helpers to download, list, and delete models in the HuggingFace cache and Ollama's store.
+- **One interface, every backend** — a single `Model.generate()` over `TextBlock` and `ImageBlock`, whether the model runs on your laptop or behind a cloud API.
+- **Interleaved multimodal prompts** — mix text segments and images in any order; encoding is handled per backend (base64 data URI over the wire, PIL in-process).
+- **A registry, not call sites** — models, endpoints, credentials and generation defaults live in one JSON file, extensible without forking the package.
+- **Mostly LiteLLM, by design** — [LiteLLM](https://docs.litellm.ai) serves 7 of the 8 hostings; only in-process Transformers needs its own code path.
 
 ## Supported Backends
 
@@ -59,7 +59,8 @@ vlmhub/
 │       ├── request.py           # TextBlock, ImageBlock, InferenceRequest
 │       └── README.md            # Backend setup guide
 └── tests/
-    └── test_generate.py         # Smoke test and usage example
+    ├── test_vqa.py              # VQAv2 samples — image + questions vs. ground-truth answers
+    └── test_captioning.py       # COCO samples — image + generated vs. reference captions
 ```
 
 ## Quick Start
@@ -74,7 +75,7 @@ source venv312/bin/activate      # macOS / Linux
 pip install -e .
 ```
 
-That covers every hosting — LiteLLM handles Gemini, Vertex AI, OpenAI and all
+That covers every hosting — LiteLLM handles Gemini, Vertex AI, OpenAI, Anthropic and all
 OpenAI-compatible local servers, so there are no per-hosting SDKs to add. Two
 optional extras:
 
@@ -118,13 +119,14 @@ See [`src/vlmhub/backends/README.md`](src/vlmhub/backends/README.md) for the ful
 
 ### 4. Run Inference
 
-[`tests/test_generate.py`](tests/test_generate.py) is both the smoke test and the usage example — read it top to bottom for the whole API:
+The scripts in [`tests/`](tests/) are both smoke tests and usage examples — each downloads a few real
+dataset samples, runs them through a client, and prints the output next to the ground truth:
 
 ```bash
-python tests/test_generate.py                                   # models.json's active client
-python tests/test_generate.py --client ollama/gemma3-4b
-python tests/test_generate.py --client gemini/flash-2.5
-python tests/test_generate.py --client transformers/gemma3-4b --image path/to/img.png
+python tests/test_captioning.py                                 # models.json's active client
+python tests/test_vqa.py --client ollama/gemma3-4b
+python tests/test_vqa.py --client gemini/flash-2.5 --n 5
+python tests/test_captioning.py --client transformers/gemma3-4b
 ```
 
 ## Usage
@@ -194,32 +196,7 @@ model = Model("my_server/my-model", models_path="my_models.json")
 
 Your file has the same flat shape and is deep-merged over the bundled one, so you can add hostings and models or override individual fields. Lists are replaced wholesale: naming an existing hosting's `models` replaces that hosting's models rather than appending, so add a new hosting key to extend. See [Adding a New Model](src/vlmhub/backends/README.md#adding-a-new-model) and [Adding a New Hosting](src/vlmhub/backends/README.md#adding-a-new-hosting).
 
-**Transformers models** take extra per-model fields — `fallback_dtype`, and optionally `model_class` and `processor_kwargs` — described in [the backend guide](src/vlmhub/backends/README.md#transformers).
-
-## Inference Request Format
-
-`Model.generate()` builds an `InferenceRequest` for you, but it is a plain dataclass you can construct directly if you're driving a backend yourself:
-
-```python
-from vlmhub import TextBlock, ImageBlock, InferenceRequest
-from vlmhub import Config, get_backend_from_config
-
-request = InferenceRequest(
-    content=[
-        ImageBlock(image_path="input/images/slide_1.png"),
-        TextBlock("What does this diagram show?"),
-    ],
-    system_prompt="",
-    max_new_tokens=4096,
-    temperature=0.3,
-    top_p=1.0,
-)
-
-backend = get_backend_from_config(Config().get_client_by_name("ollama/gemma3-4b"))
-response = backend.run(request)      # {"text": str, "logs": list[str]}
-```
-
-`InferenceRequest.to_openai_messages()` renders the request as an OpenAI-style messages list — what LiteLLM and any OpenAI-compatible client expects.
+**Transformers models** take extra per-model fields — `model_class` and `fallback_dtype`, plus an optional `processor_kwargs` — described in [the backend guide](src/vlmhub/backends/README.md#transformers).
 
 ## Local Model Management
 

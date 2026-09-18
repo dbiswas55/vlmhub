@@ -20,9 +20,8 @@ class TextBlock:
 class ImageBlock:
     """An image in the prompt: a file on disk, or a decoded PIL image.
 
-    Exactly one of image_path/image must be set. image (no file backing it)
-    is encoded to PNG on demand -- lossless, and accepted natively by every
-    backend that needs raw bytes (Gemini, OpenAI-compatible).
+    Exactly one of image_path/image must be set. An in-memory image is encoded
+    to PNG on demand — lossless, and valid wherever raw bytes are needed.
     """
     image_path: str | None = None
     image: Image.Image | None = None
@@ -32,12 +31,14 @@ class ImageBlock:
             raise ValueError("ImageBlock requires exactly one of image_path or image.")
 
     def load(self) -> Image.Image:
+        """The image as RGB PIL — what in-process backends hand to a processor."""
         if self.image is not None:
             return self.image.convert("RGB")
         with Image.open(self.image_path) as img:
             return img.convert("RGB")
 
     def read_bytes(self) -> bytes:
+        """The image's raw bytes: the file as-is, or the in-memory image as PNG."""
         if self.image is not None:
             buf = io.BytesIO()
             self.image.convert("RGB").save(buf, format="PNG")
@@ -46,18 +47,20 @@ class ImageBlock:
             return f.read()
 
     def mime_type(self) -> str:
+        """The type those bytes carry, guessed from the file's extension."""
         if self.image is not None:
             return "image/png"
         mime, _ = mimetypes.guess_type(self.image_path)
         return mime or "image/jpeg"
 
     def as_data_uri(self) -> str:
+        """The image inlined as a base64 data URI — what API-hosted backends send."""
         b64 = base64.b64encode(self.read_bytes()).decode("utf-8")
         return f"data:{self.mime_type()};base64,{b64}"
 
     @property
     def label(self) -> str:
-        """Short identifier for debug/logging output."""
+        """A short stand-in for the image, to log a prompt where it can't be shown."""
         return Path(self.image_path).name if self.image_path is not None else "<in-memory image>"
 
 
@@ -66,27 +69,16 @@ ContentBlock = TextBlock | ImageBlock
 
 @dataclass
 class InferenceRequest:
-    """Ordered list of text/image blocks — same structure for every backend.
+    """An ordered list of text/image blocks — the same structure for every backend.
 
-    Usage:
-        # Single image + instruction
-        req = InferenceRequest(content=[
-            ImageBlock(image_path="input/images/image_1.png"),
-            TextBlock("What is the core concept shown here?"),
-        ], system_prompt="", max_new_tokens=4096, temperature=1.0, top_p=1.0)
+    Model.generate() builds this for you; construct it directly only when driving
+    a backend yourself. Blocks interleave freely, and an ImageBlock carries either
+    a file path or an in-memory PIL image (e.g. a decoded video frame):
 
-        # Multiple images + instruction
-        req = InferenceRequest(content=[
-            ImageBlock(image_path="input/images/image_1.png"),
-            ImageBlock(image_path="input/images/image_2.png"),
-            TextBlock("Compare the two slides."),
-        ], system_prompt="", max_new_tokens=4096, temperature=1.0, top_p=1.0)
-
-        # In-memory PIL image (e.g. a decoded video frame) -- no file needed
-        req = InferenceRequest(content=[
-            ImageBlock(image=frame),
-            TextBlock("What is happening in this frame?"),
-        ], system_prompt="", max_new_tokens=4096, temperature=1.0, top_p=1.0)
+        InferenceRequest(
+            content=[ImageBlock(image_path="slide.png"), TextBlock("What is this?")],
+            system_prompt="", max_new_tokens=4096, temperature=0.3, top_p=1.0,
+        )
     """
 
     content: list[ContentBlock]
@@ -97,14 +89,8 @@ class InferenceRequest:
 
     @property
     def do_sample(self) -> bool:
+        """Whether to sample rather than decode greedily — Transformers only."""
         return self.temperature > 0.0
-
-    @property
-    def has_images(self) -> bool:
-        return any(isinstance(b, ImageBlock) for b in self.content)
-
-    def image_blocks(self) -> list[ImageBlock]:
-        return [b for b in self.content if isinstance(b, ImageBlock)]
 
     def to_openai_messages(self) -> list[dict]:
         """This request as an OpenAI-style messages list — what LiteLLM

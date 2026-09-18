@@ -18,12 +18,21 @@ from pathlib import Path
 
 
 class Config:
+    """The registry: the bundled models.json, optionally extended by your own.
+
+        Config().get_current_client()                    # the "active" client
+        Config().get_client_by_name("ollama/gemma3-4b")  # a specific one
+        Config("my_models.json")                         # extend the registry
+    """
+
     def __init__(self, models_path: str | Path | None = None):
         config = json.loads(self._bundled_text())
         if models_path is not None:
             override = json.loads(Path(models_path).read_text(encoding="utf-8"))
             config = self._deep_merge(config, override)
         self._config = config
+
+    # ── Load and merge ────────────────────────────────────────────────────────
 
     @staticmethod
     def _bundled_text() -> str:
@@ -33,6 +42,7 @@ class Config:
 
     @staticmethod
     def _deep_merge(base: dict, override: dict) -> dict:
+        """Override onto base, recursing into dicts and replacing lists wholesale."""
         merged = dict(base)
         for key, value in override.items():
             merged[key] = (Config._deep_merge(merged[key], value)
@@ -50,6 +60,11 @@ class Config:
         defaults = self._config.get("defaults", {})
         return {**defaults, **self._hosting_fields(hosting), **model, "hosting": hosting_name}
 
+    def _hostings(self) -> dict[str, dict]:
+        """The real hostings, skipping the "_"-prefixed comment keys beside them."""
+        return {k: v for k, v in self._config["hostings"].items()
+                if isinstance(v, dict) and not k.startswith("_")}
+
     # ── Lookup ────────────────────────────────────────────────────────────────
 
     def get_current_client(self) -> dict:
@@ -59,12 +74,10 @@ class Config:
 
     def get_client(self, hosting_name: str, model_name: str) -> dict:
         """A specific client by hosting key and model name, merged with defaults."""
-        hostings = self._config["hostings"]
-        if hosting_name not in hostings or not isinstance(hostings[hosting_name], dict):
-            available = sorted(k for k, v in hostings.items()
-                               if isinstance(v, dict) and not k.startswith("_"))
+        hostings = self._hostings()
+        if hosting_name not in hostings:
             raise KeyError(f"No hosting '{hosting_name}' in models.json. "
-                           f"Available: {', '.join(available)}")
+                           f"Available: {', '.join(sorted(hostings))}")
 
         hosting = hostings[hosting_name]
         for model in hosting.get("models", []):
@@ -83,12 +96,13 @@ class Config:
         hosting_name, model_name = name.split("/", 1)
         return self.get_client(hosting_name, model_name)
 
-    def get_all_clients(self) -> list[dict]:
-        """Every configured client across every hosting, merged with defaults."""
-        clients = []
-        for hosting_name, hosting in self._config["hostings"].items():
-            if not isinstance(hosting, dict) or hosting_name.startswith("_"):
-                continue
-            for model in hosting.get("models", []):
-                clients.append(self._merged(hosting_name, hosting, model))
-        return clients
+    def get_all_client_names(self) -> list[str]:
+        """Every model alias in the registry, deduplicated and sorted.
+
+        These are the models' "name" fields, not provider model ids, and one
+        alias often appears under several hostings ("gemma3-4b" is on ollama,
+        mlx_vlm, vllm and transformers) — pair one with a hosting to name a client.
+        """
+        return sorted({model["name"]
+                       for hosting in self._hostings().values()
+                       for model in hosting.get("models", [])})

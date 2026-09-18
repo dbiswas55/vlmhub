@@ -30,7 +30,7 @@ Switching to Gemini, vLLM or a local Transformers model is the same two lines wi
 | Category | Provider | Hosting Key | Backend | How it runs |
 |---|---|---|---|---|
 | **Cloud API** | Google Gemini (AI Studio) | `gemini` | `litellm` | LiteLLM `gemini/` provider; supports `thinking_budget` |
-| **Cloud API** | Google Gemini via Vertex AI | `gemini_vtx` | `litellm` | LiteLLM `vertex_ai/`, Application Default Credentials |
+| **Cloud API** | Google Gemini via Vertex AI | `vertex_ai` | `litellm` | LiteLLM `vertex_ai/`, Application Default Credentials |
 | **Cloud API** | OpenAI | `openai` | `litellm` | GPT-4o, GPT-4o-mini |
 | **Local Server** | Ollama | `ollama` | `litellm` | Local server on port 11434 |
 | **Local Server** | MLX-VLM | `mlx_vlm` | `litellm` | Apple Silicon, port 8080 |
@@ -167,7 +167,7 @@ The model registry lives in [`src/vlmhub/models.json`](src/vlmhub/models.json), 
 ```jsonc
 {
   "active": { "hosting": "ollama", "model": "gemma3-4b" },      // default client
-  "defaults": { "max_tokens": 4096, "temperature": 0.3, "top_p": 1.0 },
+  "defaults": { "max_new_tokens": 4096, "temperature": 0.3, "top_p": 1.0 },
   "hostings": {
     "ollama": {
       "backend": "litellm",
@@ -179,7 +179,7 @@ The model registry lives in [`src/vlmhub/models.json`](src/vlmhub/models.json), 
         // ...
       ]
     }
-    // gemini, gemini_vtx, openai, mlx_vlm, vllm, transformers ...
+    // gemini, vertex_ai, openai, mlx_vlm, vllm, transformers ...
   }
 }
 ```

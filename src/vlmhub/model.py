@@ -43,7 +43,7 @@ class Model:
         request = InferenceRequest(
             content=content,
             system_prompt=system_prompt,
-            max_new_tokens=overrides.get("max_new_tokens", self.config["max_tokens"]),
+            max_new_tokens=overrides.get("max_new_tokens", self.config["max_new_tokens"]),
             temperature=overrides.get("temperature", self.config["temperature"]),
             top_p=overrides.get("top_p", self.config["top_p"]),
         )

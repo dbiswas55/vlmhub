@@ -44,8 +44,8 @@ HF_TOKEN=hf_your_token_here    # huggingface.co/settings/tokens
 HF_HOME=.cache/huggingface     # optional; use absolute path on a cluster
 GEMINI_API_KEY=...             # for the gemini hosting
 OPENAI_API_KEY=...             # for the openai hosting
-GCP_PROJECT=...                # for the gemini_vtx hosting
-GCP_LOCATION=...               # for the gemini_vtx hosting
+GCP_PROJECT=...                # for the vertex_ai hosting
+GCP_LOCATION=...               # for the vertex_ai hosting
 ```
 
 ## Local Model Management
@@ -63,7 +63,7 @@ python src/vlmhub/utils/local_models.py
 No server, no local model files — just an API key (above) and a hosting choice in [`models.json`](../models.json):
 
 - **`gemini`** — Gemini via Google AI Studio, on LiteLLM's native `gemini/` provider. Simplest option, and supports `thinking_budget`.
-- **`gemini_vtx`** — the same models routed through Vertex AI (needs `GCP_PROJECT`/`GCP_LOCATION` and Application Default Credentials).
+- **`vertex_ai`** — the same Gemini models routed through Vertex AI (needs `GCP_PROJECT`/`GCP_LOCATION` and Application Default Credentials).
 - **`openai`** — OpenAI's own API.
 
 ## Local Models

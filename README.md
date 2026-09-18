@@ -173,7 +173,6 @@ The model registry lives in [`src/vlmhub/models.json`](src/vlmhub/models.json), 
       "backend": "litellm",
       "litellm_prefix": "openai",
       "api_base": "http://localhost:11434/v1",
-      "api_key": "ollama",
       "models": [
         { "name": "gemma3-4b", "model_id": "gemma3:4b" }
         // ...

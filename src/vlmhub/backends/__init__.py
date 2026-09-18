@@ -15,19 +15,21 @@ def get_backend_from_config(client: dict) -> BaseBackend:
     backend = client["backend"]
 
     if backend == "litellm":
-        # LiteLLM routes by a "<provider>/<model_id>" string; the provider prefix is
-        # the hosting's, the model id the model's. A hosting with no prefix passes
-        # the model id through untouched.
+        # LiteLLM routes by "<provider>/<model_id>"; no prefix means model_id is passed through as-is.
         litellm_prefix = client.get("litellm_prefix")
         model_id = client["model_id"]
         litellm_model = f"{litellm_prefix}/{model_id}" if litellm_prefix else model_id
 
-        # A literal "api_key" is for servers that want any non-empty token
-        # (Ollama, MLX-VLM); a real secret is named indirectly via "api_key_env".
+        # Precedence: a real secret via "api_key_env", else a literal "api_key"
+        # for a server wanting a specific token, else an auto placeholder for a
+        # local OpenAI-compatible server (Ollama, MLX-VLM) that needs *a* token
+        # but never checks it.
         api_key = client.get("api_key")
         api_key_env = client.get("api_key_env")
         if api_key_env:
             api_key = os.getenv(api_key_env)
+        elif not api_key and litellm_prefix == "openai" and client.get("api_base"):
+            api_key = "not-needed"
 
         vertex_project = os.getenv(client["vertex_project_env"]) if client.get("vertex_project_env") else None
         vertex_location = os.getenv(client["vertex_location_env"]) if client.get("vertex_location_env") else None

@@ -62,11 +62,10 @@
     "_comment_local": "── Local inference servers ─────────────────────────────────────",
 
     "ollama": {
-      "_comment": "Reached as an OpenAI-compatible server; api_key is a placeholder Ollama ignores.",
+      "_comment": "Reached as an OpenAI-compatible server; no api_key needed, Ollama doesn't check one.",
       "backend": "litellm",
       "litellm_prefix": "openai",
       "api_base": "http://localhost:11434/v1",
-      "api_key": "ollama",
       "models": [
         { "name": "gemma3-4b",   "model_id": "gemma3:4b" },
         { "name": "gemma3-12b",  "model_id": "gemma3:12b" },
@@ -80,7 +79,6 @@
       "backend": "litellm",
       "litellm_prefix": "openai",
       "api_base": "http://localhost:8080/v1",
-      "api_key": "mlx",
       "models": [
         { "name": "gemma3-4b",   "model_id": "mlx-community/gemma-3-4b-it-4bit" },
         { "name": "gemma3-12b",  "model_id": "mlx-community/gemma-3-12b-it-qat-4bit" },
@@ -105,7 +103,7 @@
     "_comment_inproc": "── In-process inference (no server required) ───────────────────",
 
     "transformers": {
-      "_comment_quantization": "quantization_level: null | '4bit' (NF4). Set '4bit' to quantize, which applies on CUDA only (ignored with a warning on MPS/CPU) and also lets a model spill across cards.",
+      "_comment_quantization": "quantization_level: null | '4bit' (NF4). Set '4bit' to quantize, which applies on CUDA only (ignored with a warning on MPS/CPU).",
       "_comment_dtype": "All models here are native bfloat16. fallback_dtype is used on GPUs without native bfloat16 tensor cores (sm < 80); if fallback_dtype is null, bfloat16 is kept and runs emulated there.",
       "_comment_processor": "processor_kwargs: extra arguments passed as-is to AutoProcessor.from_pretrained — list them only for a model that needs one. Idefics3: do_image_splitting=false stops each frame being upscaled to 1456px and cut into 17 tiles (~3000 -> ~175 tokens/frame).",
       "backend": "transformers",

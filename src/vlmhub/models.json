@@ -23,9 +23,10 @@
       "api_key_env": "GEMINI_API_KEY",
       "models": [
         { "name": "flash-2.5",      "model_id": "gemini-2.5-flash", "thinking_budget": 0 },
-        { "name": "flash-3.1lite",  "model_id": "gemini-3.1-flash-lite", "thinking_budget": 0 },
+        { "name": "flash-3.5",      "model_id": "gemini-3.5-flash", "thinking_budget": 0 },
         { "name": "flash-3.5lite",  "model_id": "gemini-3.5-flash-lite", "thinking_budget": 0 },
         { "name": "flash-3.6",      "model_id": "gemini-3.6-flash", "thinking_budget": 0 },
+        { "name": "flash-3.8",      "model_id": "gemini-3.8-flash", "thinking_budget": 0 },
         { "name": "pro-2.5",        "model_id": "gemini-2.5-pro", "thinking_budget": -1, "max_tokens": null },
         { "name": "pro-3.1preview", "model_id": "gemini-3.1-pro-preview", "thinking_budget": -1, "max_tokens": null }
       ]
@@ -39,9 +40,10 @@
       "vertex_location_env": "GCP_LOCATION",
       "models": [
         { "name": "flash-2.5",      "model_id": "gemini-2.5-flash", "thinking_budget": 0 },
-        { "name": "flash-3.1lite",  "model_id": "gemini-3.1-flash-lite", "thinking_budget": 0 },
+        { "name": "flash-3.5",      "model_id": "gemini-3.5-flash", "thinking_budget": 0 },
         { "name": "flash-3.5lite",  "model_id": "gemini-3.5-flash-lite", "thinking_budget": 0 },
         { "name": "flash-3.6",      "model_id": "gemini-3.6-flash", "thinking_budget": 0 },
+        { "name": "flash-3.8",      "model_id": "gemini-3.8-flash", "thinking_budget": 0 },
         { "name": "pro-2.5",        "model_id": "gemini-2.5-pro", "thinking_budget": -1, "max_tokens": null },
         { "name": "pro-3.1preview", "model_id": "gemini-3.1-pro-preview", "thinking_budget": -1, "max_tokens": null }
       ]
@@ -105,21 +107,20 @@
     "transformers": {
       "_comment": "quantization_level: null | '4bit' (NF4). Set '4bit' to quantize, which applies on CUDA only (ignored with a warning on MPS/CPU) and also lets a model spill across cards.",
       "_dtype_comment": "All models here are native bfloat16. fallback_dtype is used on GPUs without native bfloat16 tensor cores (sm < 80); if fallback_dtype is null, bfloat16 is kept and runs emulated there.",
-      "_class_comment": "model_class: the transformers auto-class to load with. Omitted means AutoModelForImageTextToText — list it only for a model registered under a different class.",
       "_processor_comment": "processor_kwargs: extra arguments passed as-is to AutoProcessor.from_pretrained — list them only for a model that needs one. Idefics3: do_image_splitting=false stops each frame being upscaled to 1456px and cut into 17 tiles (~3000 -> ~175 tokens/frame).",
       "backend": "transformers",
       "quantization_level": null,
       "models": [
-        { "name": "gemma3-4b",     "model_id": "google/gemma-3-4b-it",                       "fallback_dtype": null, "notes": ["no safe fp16 fallback: fp16 overflows into NaN logits; runs emulated bf16 on V100"] },
-        { "name": "gemma3-12b",    "model_id": "google/gemma-3-12b-it",                      "fallback_dtype": null, "notes": ["no safe fp16 fallback: fp16 overflows into NaN logits; runs emulated bf16 on V100", "~24GB in bf16 does not fit a 16GB V100 -- that card needs quantization_level '4bit'"] },
-        { "name": "qwen3vl-4b",    "model_id": "Qwen/Qwen3-VL-4B-Instruct",                  "fallback_dtype": "float16" },
-        { "name": "qwen3vl-8b",    "model_id": "Qwen/Qwen3-VL-8B-Instruct",                  "fallback_dtype": "float16" },
-        { "name": "qwen25vl-7b",   "model_id": "Qwen/Qwen2.5-VL-7B-Instruct",                "fallback_dtype": "float16" },
-        { "name": "internvl35-8b", "model_id": "OpenGVLab/InternVL3_5-8B-HF",                "fallback_dtype": "float16" },
-        { "name": "mplugowl3-7b",  "model_id": "mPLUG/mPLUG-Owl3-7B-241101",                 "fallback_dtype": "float16", "model_class": "AutoModelForCausalLM" },
-        { "name": "molmo2-7b",     "model_id": "allenai/Molmo2-O-7B",                        "fallback_dtype": null, "notes": ["fp16 safety unverified; runs emulated bf16 on V100 until tested, then set fallback_dtype"] },
-        { "name": "idefics3-8b",   "model_id": "HuggingFaceM4/Idefics3-8B-Llama3",           "fallback_dtype": "float16", "processor_kwargs": { "do_image_splitting": false } },
-        { "name": "llavaov-7b",    "model_id": "llava-hf/llava-onevision-qwen2-7b-ov-hf",    "fallback_dtype": "float16" }
+        { "name": "gemma3-4b",     "model_id": "google/gemma-3-4b-it",                       "model_class": "AutoModelForImageTextToText", "fallback_dtype": null, "notes": ["no safe fp16 fallback: fp16 overflows into NaN logits; runs emulated bf16 on V100"] },
+        { "name": "gemma3-12b",    "model_id": "google/gemma-3-12b-it",                      "model_class": "AutoModelForImageTextToText", "fallback_dtype": null, "notes": ["no safe fp16 fallback: fp16 overflows into NaN logits; runs emulated bf16 on V100", "~24GB in bf16 does not fit a 16GB V100 -- that card needs quantization_level '4bit'"] },
+        { "name": "qwen3vl-4b",    "model_id": "Qwen/Qwen3-VL-4B-Instruct",                  "model_class": "AutoModelForImageTextToText", "fallback_dtype": "float16" },
+        { "name": "qwen3vl-8b",    "model_id": "Qwen/Qwen3-VL-8B-Instruct",                  "model_class": "AutoModelForImageTextToText", "fallback_dtype": "float16" },
+        { "name": "qwen25vl-7b",   "model_id": "Qwen/Qwen2.5-VL-7B-Instruct",                "model_class": "AutoModelForImageTextToText", "fallback_dtype": "float16" },
+        { "name": "internvl35-8b", "model_id": "OpenGVLab/InternVL3_5-8B-HF",                "model_class": "AutoModelForImageTextToText", "fallback_dtype": "float16" },
+        { "name": "mplugowl3-7b",  "model_id": "mPLUG/mPLUG-Owl3-7B-241101",                 "model_class": "AutoModelForCausalLM",        "fallback_dtype": "float16" },
+        { "name": "molmo2-7b",     "model_id": "allenai/Molmo2-O-7B",                        "model_class": "AutoModelForImageTextToText", "fallback_dtype": null, "notes": ["fp16 safety unverified; runs emulated bf16 on V100 until tested, then set fallback_dtype"] },
+        { "name": "idefics3-8b",   "model_id": "HuggingFaceM4/Idefics3-8B-Llama3",           "model_class": "AutoModelForImageTextToText", "fallback_dtype": "float16", "processor_kwargs": { "do_image_splitting": false } },
+        { "name": "llavaov-7b",    "model_id": "llava-hf/llava-onevision-qwen2-7b-ov-hf",    "model_class": "AutoModelForImageTextToText", "fallback_dtype": "float16" }
       ]
     }
 

@@ -15,11 +15,6 @@ _INLINE_IMAGE_MODEL_PATTERNS: frozenset[str] = frozenset([
     "qwen", "internvl",      # Qwen2-VL, Qwen3-VL, and future Qwen VL variants
 ])
 
-# The transformers auto-class a model loads through. Image-text VLMs are served by
-# AutoModelForImageTextToText; a model registered under a different class — mPLUG-Owl3
-# is an AutoModelForCausalLM — names that class as "model_class" in its config entry.
-_DEFAULT_MODEL_CLASS = "AutoModelForImageTextToText"
-
 # The schemes a "quantization_level" may name; None is full precision. Listing one here
 # only lets config carry it — _build_quantization_config() decides what it can build, and
 # refuses at load time anything it has no branch for.
@@ -121,8 +116,8 @@ class TransformersBackend(BaseBackend):
     A model is described entirely by its entry under the "transformers" hosting in
     models.json. Four of those fields shape how it loads:
 
-      model_class         the transformers auto-class to load through, defaulting
-                          to AutoModelForImageTextToText.
+      model_class         the transformers auto-class to load through, e.g.
+                          AutoModelForImageTextToText or AutoModelForCausalLM. Required.
       fallback_dtype      the dtype to use on a GPU without native bfloat16.
       quantization_level  None for full precision, "4bit" for 4-bit NF4 on CUDA.
       processor_kwargs    extra arguments passed as-is to AutoProcessor.from_pretrained,
@@ -157,8 +152,9 @@ class TransformersBackend(BaseBackend):
         self.quantization_level = self._checked("quantization_level", quantization_level, _QUANTIZATION_LEVELS)
         # Consulted only on a pre-Ampere GPU; see _pick_compute_dtype().
         self.fallback_dtype = self._checked("fallback_dtype", fallback_dtype, _FALLBACK_DTYPES)
-        # Config names a class only where it differs from the default.
-        self.model_class = model_class or _DEFAULT_MODEL_CLASS
+        if not model_class:
+            raise ValueError(f"[{name}] model_class is required for Transformers backend.")
+        self.model_class = model_class
         # Not interpreted here: each key is the processor's own setting.
         self.processor_kwargs = processor_kwargs or {}
 
@@ -261,7 +257,7 @@ class TransformersBackend(BaseBackend):
             raise ValueError(
                 f"[{self.name}] model_class '{self.model_class}' is not a class in the "
                 f"installed transformers ({transformers.__version__}). Check the spelling "
-                f"in models.json, or omit it to use {_DEFAULT_MODEL_CLASS}."
+                f"in models.json."
             )
         return cls
 

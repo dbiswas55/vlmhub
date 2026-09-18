@@ -1,15 +1,23 @@
 """
 test_captioning.py
 ====================
-Downloads a few real image+caption pairs from the COCO Captions dataset
-(jxie/coco_captions on the HF Hub) into input/<name>/, skipping any sample
-already downloaded, then asks vlmhub's Model to summarize each image and
-prints it next to the human-written reference caption.
+Downloads a few real image+captions samples from the COCO Captions dataset
+(jxie/coco_captions on the HF Hub) into <out_dir>/sample_XX/, skipping any
+sample already downloaded, then asks vlmhub's Model to summarize each image
+and prints it next to the human-written reference captions.
+
+Each sample is its own subfolder:
+    coco_samples/
+      sample_01/
+        image.jpg
+        captions.json   # {"captions": ["...", "...", ...]}
+      sample_02/
+        ...
 
 Usage
 -----
     python tests/test_captioning.py
-    python tests/test_captioning.py --sample input/coco_sample --client ollama/gemma3-4b --n 3
+    python tests/test_captioning.py --sample input/coco_samples --client ollama/gemma3-4b --n 3
 """
 
 from __future__ import annotations
@@ -29,44 +37,57 @@ DATASET_REPO = "jxie/coco_captions"
 DATASET_FILE = "data/test-00000-of-00009-4a09b5aab8de74d3.parquet"
 
 
-def ensure_samples(out_dir: Path, n: int = 3) -> list[tuple[Path, str]]:
-    """Make sure n real COCO image+caption pairs exist locally, downloading
-    only if they aren't already there. Returns (image_path, reference_caption)
-    pairs, in order."""
-    captions_path = out_dir / "captions.json"
-    image_paths = [out_dir / f"image_{i}.jpg" for i in range(1, n + 1)]
-    if captions_path.exists() and all(p.exists() for p in image_paths):
+def ensure_samples(out_dir: Path, n: int = 3) -> list[dict]:
+    """Make sure n real COCO samples (each an image with all its reference
+    captions) exist locally as out_dir/sample_XX/{image.jpg,captions.json},
+    downloading only if they aren't already there. Returns a list of
+    {"dir": Path, "image_path": Path, "captions": list[str]}."""
+    width = max(2, len(str(n)))
+    sample_dirs = [out_dir / f"sample_{i:0{width}d}" for i in range(1, n + 1)]
+
+    # --- reuse what's already on disk, if complete ---
+    def load_cached() -> list[dict] | None:
+        samples = []
+        for sample_dir in sample_dirs:
+            image_path = sample_dir / "image.jpg"
+            captions_path = sample_dir / "captions.json"
+            if not (image_path.exists() and captions_path.exists()):
+                return None
+            captions = json.loads(captions_path.read_text(encoding="utf-8"))["captions"]
+            samples.append({"dir": sample_dir, "image_path": image_path, "captions": captions})
+        return samples
+
+    if (cached := load_cached()) is not None:
         print(f"already have {n} samples in {out_dir}, skipping download")
-        captions = json.loads(captions_path.read_text(encoding="utf-8"))
-        return [(p, captions[p.name]) for p in image_paths]
+        return cached
 
-    out_dir.mkdir(parents=True, exist_ok=True)
+    # --- download the shard and pick n images ---
     shard_path = hf_hub_download(repo_id=DATASET_REPO, repo_type="dataset", filename=DATASET_FILE)
-    # The dataset stores 5 caption rows per image (one row per human caption,
-    # all sharing the same cocoid) — keep only the first row per image so the
-    # n samples are n distinct images, not n captions of the same image.
     rows = pq.ParquetFile(shard_path).read_row_group(0).to_pylist()
-    seen_cocoids = set()
-    distinct_rows = []
+
+    # Group rows by cocoid (the dataset stores 5 caption rows per image, one
+    # row per human caption, all sharing the same cocoid), preserving
+    # first-seen order, so each sample gets all of its reference captions.
+    groups: dict[int, list[dict]] = {}
     for row in rows:
-        if row["cocoid"] in seen_cocoids:
-            continue
-        seen_cocoids.add(row["cocoid"])
-        distinct_rows.append(row)
-        if len(distinct_rows) == n:
-            break
+        groups.setdefault(row["cocoid"], []).append(row)
 
+    chosen_groups = list(groups.values())[:n]
+
+    # --- save each chosen image + its captions to its own subfolder ---
     samples = []
-    captions = {}
-    for image_path, row in zip(image_paths, distinct_rows):
-        image = Image.open(io.BytesIO(row["image"]["bytes"])).convert("RGB")
+    for sample_dir, group in zip(sample_dirs, chosen_groups):
+        sample_dir.mkdir(parents=True, exist_ok=True)
+        image_path = sample_dir / "image.jpg"
+        image = Image.open(io.BytesIO(group[0]["image"]["bytes"])).convert("RGB")
         image.save(image_path)
-        reference = row["caption"].strip()
-        print(f"downloaded {image_path} — reference: {reference}")
-        samples.append((image_path, reference))
-        captions[image_path.name] = reference
 
-    captions_path.write_text(json.dumps(captions, indent=2), encoding="utf-8")
+        captions = [row["caption"].strip() for row in group]
+        (sample_dir / "captions.json").write_text(json.dumps({"captions": captions}, indent=2), encoding="utf-8")
+
+        print(f"downloaded {sample_dir} — {len(captions)} caption(s)")
+        samples.append({"dir": sample_dir, "image_path": image_path, "captions": captions})
+
     return samples
 
 
@@ -76,20 +97,22 @@ def run(sample_dir: Path, client_name: str = "", n: int = 3) -> None:
     model = Model(client_name)
     model.report()
 
-    for image_path, reference in samples:
+    # --- ask the model to summarize each image and compare to references ---
+    for sample in samples:
         content = [
-            ImageBlock(image_path=str(image_path)),
+            ImageBlock(image_path=str(sample["image_path"])),
             TextBlock("Write a one-sentence summary of this image."),
         ]
         response = model.generate(content)
-        print(f"\n[{image_path.name}]")
-        print(f"  reference : {reference}")
-        print(f"  generated : {response['text'].strip()}")
+        print(f"\n[{sample['dir'].name}]")
+        for i, caption in enumerate(sample["captions"], start=1):
+            print(f"  reference {i}: {caption}")
+        print(f"  generated  : {response['text'].strip()}")
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--sample", default="input/coco_sample", type=Path)
+    ap.add_argument("--sample", default="input/coco_samples", type=Path)
     ap.add_argument("--client", default="", help='e.g. "ollama/gemma3-4b"; blank uses models.json\'s "active" client')
     ap.add_argument("--n", default=3, type=int)
     args = ap.parse_args()

@@ -24,10 +24,10 @@ An `ImageBlock` takes an image file (`image_path=`) or a PIL image in memory (`i
 
 ## Key Features
 
-- **One interface, every backend** — a single `Model.generate()` call over `TextBlock` and `ImageBlock`, independent of which model or backend is behind it.
-- **Interleaved multimodal prompts** — build prompts by mixing `TextBlock` and `ImageBlock` in any order; each backend handles encoding as it needs (base64 data URI over the wire, PIL in-process).
-- **A model registry** — models, settings and generation defaults live in one JSON file, editable in place; give a model any short name you like alongside its real model id.
-- **Transformers backend, hardware-aware** — [LiteLLM](https://docs.litellm.ai) covers 7 of the 8 hostings, while the `transformers` backend runs a model in-process with an optional 4-bit quantized load, and a `fallback_dtype` for pre-Ampere GPUs (e.g. V100) that lack native bfloat16.
+- **One interface, every backend** — a single `Model.generate()` call over `TextBlock` and `ImageBlock`, independent of model or backend.
+- **Interleaved multimodal prompts** — mix `TextBlock` and `ImageBlock` in any order; each backend encodes as it needs (base64 data URI over the wire, PIL in-process).
+- **A model registry** — models, settings and generation defaults live in one editable JSON file; give a model any short name you like alongside its real model id.
+- **A hardware-aware Transformers backend** — [LiteLLM](https://docs.litellm.ai) covers most backends, while `transformers` runs a model in-process with an optional 4-bit quantized load and a `fallback_dtype` for pre-Ampere GPUs (e.g. V100) that lack native bfloat16.
 
 ## Supported Backends
 
@@ -57,13 +57,12 @@ pip install -e .
 ```
 
 That covers every hosting — LiteLLM handles Gemini, Vertex AI, OpenAI, Anthropic and all
-OpenAI-compatible local servers, so there are no per-hosting SDKs to add. Three
-optional extras:
+OpenAI-compatible local servers, so there are no per-hosting SDKs to add. Two optional extras, or both at once:
 
 ```bash
 pip install -e ".[quantization]"   # bitsandbytes, for 4-bit loads under `transformers`
 pip install -e ".[ollama]"         # only to manage Ollama's store via local_models.py
-pip install -e ".[samples]"        # pyarrow, only for the example scripts in tests/
+pip install -e ".[all]"            # both of the above
 ```
 
 ### 2. Configure API Keys
@@ -102,8 +101,7 @@ See [`src/vlmhub/backends/README.md`](src/vlmhub/backends/README.md) for the ful
 ### 4. Run Inference
 
 The scripts in [`tests/`](tests/) are both smoke tests and usage examples — each downloads a few real
-dataset samples, runs them through a client, and prints the output next to the ground truth.
-They need the `samples` extra (`pip install -e ".[samples]"`):
+dataset samples, runs them through a client, and prints the output next to the ground truth:
 
 ```bash
 python tests/test_captioning.py                                 # models.json's active client

@@ -14,12 +14,13 @@ dependencies = [
     "huggingface_hub",
     "python-dotenv",
     "litellm",
+    "pyarrow",
 ]
 
 [project.optional-dependencies]
 quantization = ["bitsandbytes"]
 ollama = ["ollama"]
-samples = ["pyarrow"]
+all = ["bitsandbytes", "ollama"]
 
 [build-system]
 requires = ["setuptools>=68"]

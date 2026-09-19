@@ -28,13 +28,13 @@ That covers every hosting: there are no per-hosting client SDKs to add, because
 and every OpenAI-compatible local server through one package, and it is a core
 dependency.
 
-Three extras exist for things not everyone needs:
+Two extras exist for things not everyone needs, plus `all` to get both:
 
 | Extra | Install | What it is for |
 |---|---|---|
 | `quantization` | `pip install -e ".[quantization]"` | `bitsandbytes`, for `quantization_level: "4bit"` on CUDA under the `transformers` hosting |
 | `ollama` | `pip install -e ".[ollama]"` | the `ollama` Python package, needed only to list/download/delete models in Ollama's own store via `local_models.py` — **not** to call a running Ollama server |
-| `samples` | `pip install -e ".[samples]"` | `pyarrow`, needed only by the example scripts in `tests/`, which read dataset shards from the HuggingFace Hub |
+| `all` | `pip install -e ".[all]"` | both of the above |
 
 `mlx`/`mlx-vlm` and `vllm` are **not** client-side packages — they're only for the machine that *serves* a model that way (`python -m mlx_vlm.server` / `vllm serve`, see below). A client pointed at either server needs nothing extra.
 

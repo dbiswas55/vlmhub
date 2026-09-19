@@ -10,20 +10,24 @@ model = Model("ollama/gemma3-4b")            # local server
 # model = Model("transformers/qwen3vl-8b")   # in-process, no server
 
 reply = model.generate([
-    ImageBlock(image_path="slide.png"),
-    TextBlock("What does this diagram show?"),
+    TextBlock("Here are two images:"),
+    ImageBlock(image_path="image1.png"),     # an image file on disk
+    ImageBlock(image=pil_image),             # or a PIL image in memory
+    TextBlock("What are the main differences between them?"),
 ])
 print(reply["text"])
 ```
 
 Switching between them is the same two lines with a different client name.
 
+An `ImageBlock` takes an image file (`image_path=`) or a PIL image in memory (`image=`), such as a video frame.
+
 ## Key Features
 
-- **One interface, every backend** — a single `Model.generate()` over `TextBlock` and `ImageBlock`, whether the model runs on your laptop or behind a cloud API.
-- **Interleaved multimodal prompts** — mix text segments and images in any order; encoding is handled per backend (base64 data URI over the wire, PIL in-process).
-- **A registry, not call sites** — models, endpoints, credentials and generation defaults live in one JSON file, extensible without forking the package.
-- **Mostly LiteLLM, by design** — [LiteLLM](https://docs.litellm.ai) serves 7 of the 8 hostings; only in-process Transformers needs its own code path.
+- **One interface, every backend** — a single `Model.generate()` call over `TextBlock` and `ImageBlock`, independent of which model or backend is behind it.
+- **Interleaved multimodal prompts** — build prompts by mixing `TextBlock` and `ImageBlock` in any order; each backend handles encoding as it needs (base64 data URI over the wire, PIL in-process).
+- **A model registry** — models, settings and generation defaults live in one JSON file, editable in place; give a model any short name you like alongside its real model id.
+- **In-process Transformers, quantized if you want** — [LiteLLM](https://docs.litellm.ai) covers 7 of the 8 hostings, while the `transformers` backend runs a model in-process with an optional 4-bit quantized load.
 
 ## Supported Backends
 
@@ -163,7 +167,7 @@ response = model.generate(content, max_new_tokens=1024, temperature=0.0, top_p=1
 
 Useful properties: `model.name` (`"ollama/gemma3-4b"`), `model.model_id` (`"gemma3:4b"`), `model.short_name` (`"gemma3-4b"`), and `model.report()` to print both.
 
-Images are encoded automatically — base64 data URI for every API-hosted backend, PIL for Transformers. An in-memory PIL image (e.g. a decoded video frame) can be passed as `ImageBlock(image=frame)`; it is sent as PNG.
+Images are encoded automatically — base64 data URI for every API-hosted backend, PIL for Transformers. An `ImageBlock(image=...)` is encoded as PNG, so nothing is re-compressed on the way out.
 
 ## Configuration
 

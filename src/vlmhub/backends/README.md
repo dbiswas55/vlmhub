@@ -13,9 +13,12 @@ vlmhub can talk to a model through a cloud API or something running on your own 
 
 ## Python Environment
 
-Create and activate a virtual environment, then install the package:
+Clone the repository, then create and activate a virtual environment and install the package:
 
 ```bash
+git clone https://github.com/dbiswas55/vlmhub.git
+cd vlmhub
+
 python3 -m venv venv312
 source venv312/bin/activate                  # macOS / Linux
 venv312\Scripts\activate                     # Windows
@@ -23,22 +26,23 @@ venv312\Scripts\activate                     # Windows
 pip install -e .
 ```
 
-That covers every hosting: there are no per-hosting client SDKs to add, because
+That covers every **API-hosted** hosting: there are no per-hosting client SDKs to add, because
 [LiteLLM](https://docs.litellm.ai) speaks to Gemini, Vertex AI, OpenAI, Anthropic
 and every OpenAI-compatible local server through one package, and it is a core
-dependency.
+dependency. PyTorch is not: only the in-process `transformers` hosting needs it.
 
-Two extras exist for things not everyone needs, plus `all` to get both:
+Three extras exist for things not everyone needs, plus `all` to get them together:
 
 | Extra | Install | What it is for |
 |---|---|---|
-| `quantization` | `pip install -e ".[quantization]"` | `bitsandbytes`, for `quantization_level: "4bit"` on CUDA under the `transformers` hosting |
+| `transformers` | `pip install -e ".[transformers]"` | `torch`, `torchvision`, `transformers` and `accelerate`, for the in-process `transformers` hosting — without it, selecting such a client fails at backend construction |
+| `quantization` | `pip install -e ".[quantization]"` | `bitsandbytes`, for `quantization_level: "4bit"` on CUDA under the `transformers` hosting (pulls the `transformers` extra too) |
 | `ollama` | `pip install -e ".[ollama]"` | the `ollama` Python package, needed only to list/download/delete models in Ollama's own store via `local_models.py` — **not** to call a running Ollama server |
-| `all` | `pip install -e ".[all]"` | both of the above |
+| `all` | `pip install -e ".[all]"` | all three of the above |
 
 `mlx`/`mlx-vlm` and `vllm` are **not** client-side packages — they're only for the machine that *serves* a model that way (`python -m mlx_vlm.server` / `vllm serve`, see below). A client pointed at either server needs nothing extra.
 
-Configure environment — copy [`.env.example`](../../../.env.example) to `.env` at the project root and fill in what you use:
+Configure environment — copy `.env.example` to `.env` at the project root (or just create `.env`) and fill in what you use:
 
 ```env
 HF_TOKEN=hf_your_token_here    # huggingface.co/settings/tokens

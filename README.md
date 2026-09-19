@@ -47,6 +47,9 @@ Pre-configured models include **Gemma 3** (4B, 12B) and **Qwen3-VL** (4B, 8B) ac
 ### 1. Create Environment and Install
 
 ```bash
+git clone https://github.com/dbiswas55/vlmhub.git
+cd vlmhub
+
 python3 -m venv venv312
 source venv312/bin/activate      # macOS / Linux
 # venv312\Scripts\activate       # Windows
@@ -54,14 +57,15 @@ source venv312/bin/activate      # macOS / Linux
 pip install -e .
 ```
 
-That covers every hosting — LiteLLM handles Gemini, Vertex AI, OpenAI, Anthropic and all
-OpenAI-compatible local servers, so there are no per-hosting SDKs to add. Extras exist for
-things not everyone needs:
+That covers every **API-hosted** backend — LiteLLM handles Gemini, Vertex AI, OpenAI, Anthropic
+and all OpenAI-compatible local servers (Ollama, MLX-VLM, vLLM), so there are no per-hosting SDKs
+to add. PyTorch is not installed: only the in-process `transformers` hosting needs it.
 
 ```bash
-pip install -e ".[quantization]"   # bitsandbytes, for 4-bit loads under `transformers`
+pip install -e ".[transformers]"   # torch + transformers, for in-process model loading
+pip install -e ".[quantization]"   # adds bitsandbytes, for 4-bit loads under `transformers`
 pip install -e ".[ollama]"         # only to manage Ollama's store via local_models.py
-pip install -e ".[all]"            # both quantization and ollama
+pip install -e ".[all]"            # everything above
 ```
 
 ### 2. Configure API Keys

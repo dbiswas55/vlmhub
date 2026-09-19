@@ -5,9 +5,11 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 
-import torch
 from PIL import Image
 from .request import ImageBlock, InferenceRequest, TextBlock
+
+# Bound by TransformersBackend.__init__ — only that backend needs PyTorch, so it stays optional.
+torch = None  # type: ignore[assignment]
 
 # Model ID substrings that use the inline-image content style
 # (image dict embedded inside the content list rather than passed via images= kwarg).
@@ -23,12 +25,8 @@ _QUANTIZATION_LEVELS: tuple[str | None, ...] = (None, "4bit")
 
 # The dtypes a model's "fallback_dtype" may name: what to load with on a GPU that has no
 # native bfloat16. None means no substitute — stay in bfloat16 and let it be emulated.
-_FALLBACK_DTYPES: dict[str | None, "torch.dtype | None"] = {
-    None: None,
-    "float16": torch.float16,
-    "bfloat16": torch.bfloat16,
-    "float32": torch.float32,
-}
+# Names, not torch objects: _pick_compute_dtype() resolves one against torch at load time.
+_FALLBACK_DTYPES: tuple[str | None, ...] = (None, "float16", "bfloat16", "float32")
 
 
 # ── Base ──────────────────────────────────────────────────────────────────────
@@ -145,6 +143,17 @@ class TransformersBackend(BaseBackend):
         model_class: str | None = None,
         processor_kwargs: dict | None = None,
     ):
+        # PyTorch is an optional extra, needed only here; bind it module-wide for the methods below.
+        global torch
+        if torch is None:
+            try:
+                import torch
+            except ModuleNotFoundError as exc:
+                raise ModuleNotFoundError(
+                    "The 'transformers' backend needs PyTorch, which is not installed. "
+                    "Install it with: pip install 'vlmhub[transformers]'"
+                ) from exc
+
         # Required fields: fail fast, before anything is assigned or downloaded.
         if not hf_model_id:
             raise ValueError(f"[{name}] hf_model_id is required for Transformers backend.")
@@ -190,7 +199,7 @@ class TransformersBackend(BaseBackend):
             return "mps"
         return "cpu"
 
-    def _pick_compute_dtype(self) -> torch.dtype:
+    def _pick_compute_dtype(self):
         """Resolve the dtype to load the weights in.
 
         Every model served here is natively bfloat16: that is the dtype wherever
@@ -214,7 +223,7 @@ class TransformersBackend(BaseBackend):
             f"[{self.name}] GPU {torch.cuda.get_device_name()} (sm_{major}x) has no native "
             f"bfloat16; using {self.fallback_dtype or 'emulated bfloat16'}."
         )
-        return _FALLBACK_DTYPES[self.fallback_dtype] or torch.bfloat16
+        return getattr(torch, self.fallback_dtype) if self.fallback_dtype else torch.bfloat16
 
     def _build_quantization_config(self):
         """Build the bitsandbytes config for a quantized load, or None for a full one.

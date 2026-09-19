@@ -5,22 +5,20 @@ description = "A lightweight, config-driven framework for unified vision-languag
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
+
 dependencies = [
-    "torch",
-    "torchvision",
     "Pillow",
-    "transformers",
-    "accelerate",
-    "huggingface_hub",
     "python-dotenv",
     "litellm",
+    "huggingface_hub",
     "pyarrow",
 ]
 
 [project.optional-dependencies]
-quantization = ["bitsandbytes"]
+transformers = ["torch", "torchvision", "transformers", "accelerate"]
+quantization = ["vlmhub[transformers]", "bitsandbytes"]
 ollama = ["ollama"]
-all = ["bitsandbytes", "ollama"]
+all = ["vlmhub[transformers,quantization,ollama]"]
 
 [build-system]
 requires = ["setuptools>=68"]

@@ -27,45 +27,22 @@ An `ImageBlock` takes an image file (`image_path=`) or a PIL image in memory (`i
 - **One interface, every backend** — a single `Model.generate()` call over `TextBlock` and `ImageBlock`, independent of which model or backend is behind it.
 - **Interleaved multimodal prompts** — build prompts by mixing `TextBlock` and `ImageBlock` in any order; each backend handles encoding as it needs (base64 data URI over the wire, PIL in-process).
 - **A model registry** — models, settings and generation defaults live in one JSON file, editable in place; give a model any short name you like alongside its real model id.
-- **In-process Transformers, quantized if you want** — [LiteLLM](https://docs.litellm.ai) covers 7 of the 8 hostings, while the `transformers` backend runs a model in-process with an optional 4-bit quantized load.
+- **Transformers backend, hardware-aware** — [LiteLLM](https://docs.litellm.ai) covers 7 of the 8 hostings, while the `transformers` backend runs a model in-process with an optional 4-bit quantized load, and a `fallback_dtype` for pre-Ampere GPUs (e.g. V100) that lack native bfloat16.
 
 ## Supported Backends
 
 | Category | Provider | Hosting Key | Backend | How it runs |
 |---|---|---|---|---|
-| **Cloud API** | Google Gemini (AI Studio) | `gemini` | `litellm` | LiteLLM `gemini/` provider; supports `thinking_budget` |
-| **Cloud API** | Google Gemini via Vertex AI | `vertex_ai` | `litellm` | LiteLLM `vertex_ai/`, Application Default Credentials |
-| **Cloud API** | OpenAI | `openai` | `litellm` | GPT-4o, GPT-4o-mini, GPT-4.1 |
-| **Cloud API** | Anthropic | `anthropic` | `litellm` | LiteLLM `anthropic/` provider |
 | **Local Server** | Ollama | `ollama` | `litellm` | Local server on port 11434 |
 | **Local Server** | MLX-VLM | `mlx_vlm` | `litellm` | Apple Silicon, port 8080 |
 | **Local Server** | vLLM | `vllm` | `litellm` | CUDA GPU, port 8000 |
 | **In-Process** | HuggingFace Transformers | `transformers` | `transformers` | Direct model loading (CUDA / MPS / CPU) |
+| **Cloud API** | Google Gemini (AI Studio) | `gemini` | `litellm` | LiteLLM `gemini/` provider; supports `thinking_budget` |
+| **Cloud API** | Google Gemini via Vertex AI | `vertex_ai` | `litellm` | LiteLLM `vertex_ai/`, Application Default Credentials |
+| **Cloud API** | OpenAI | `openai` | `litellm` | GPT-4o, GPT-4o-mini, GPT-4.1 |
+| **Cloud API** | Anthropic | `anthropic` | `litellm` | LiteLLM `anthropic/` provider |
 
 Pre-configured models include **Gemma 3** (4B, 12B) and **Qwen3-VL** (4B, 8B) across all local hostings — plus Qwen2.5-VL, InternVL3.5, mPLUG-Owl3, Molmo2, Idefics3 and LLaVA-OneVision under `transformers` — and Gemini (2.5 / 3.x), GPT-4o/4.1, and Claude 3.x for cloud.
-
-## Project Structure
-
-```
-vlmhub/
-├── pyproject.toml
-├── .env.example                 # API keys and HF token (copy to .env)
-├── src/vlmhub/
-│   ├── __init__.py              # Public API: Model, Config, TextBlock, ImageBlock, …
-│   ├── models.json              # The model/hosting registry
-│   ├── model.py                 # Model — a client's config plus its backend
-│   ├── utils/
-│   │   ├── config.py            # Config — resolves "hosting/model" into a client dict
-│   │   └── local_models.py      # List / download / delete HF-cache and Ollama models
-│   └── backends/
-│       ├── __init__.py          # Backend factory (get_backend_from_config)
-│       ├── backends.py          # BaseBackend, LiteLLMBackend, TransformersBackend
-│       ├── request.py           # TextBlock, ImageBlock, InferenceRequest
-│       └── README.md            # Backend setup guide
-└── tests/
-    ├── test_vqa.py              # VQAv2 samples — image + questions vs. ground-truth answers
-    └── test_captioning.py       # COCO samples — image + generated vs. reference captions
-```
 
 ## Quick Start
 
@@ -168,6 +145,29 @@ response = model.generate(content, max_new_tokens=1024, temperature=0.0, top_p=1
 Useful properties: `model.name` (`"ollama/gemma3-4b"`), `model.model_id` (`"gemma3:4b"`), `model.short_name` (`"gemma3-4b"`), and `model.report()` to print both.
 
 Images are encoded automatically — base64 data URI for every API-hosted backend, PIL for Transformers. An `ImageBlock(image=...)` is encoded as PNG, so nothing is re-compressed on the way out.
+
+## Project Structure
+
+```
+vlmhub/
+├── pyproject.toml
+├── .env.example                 # API keys and HF token (copy to .env)
+├── src/vlmhub/
+│   ├── __init__.py              # Public API: Model, Config, TextBlock, ImageBlock, …
+│   ├── models.json              # The model/hosting registry
+│   ├── model.py                 # Model — a client's config plus its backend
+│   ├── utils/
+│   │   ├── config.py            # Config — resolves "hosting/model" into a client dict
+│   │   └── local_models.py      # List / download / delete HF-cache and Ollama models
+│   └── backends/
+│       ├── __init__.py          # Backend factory (get_backend_from_config)
+│       ├── backends.py          # BaseBackend, LiteLLMBackend, TransformersBackend
+│       ├── request.py           # TextBlock, ImageBlock, InferenceRequest
+│       └── README.md            # Backend setup guide
+└── tests/
+    ├── test_vqa.py              # VQAv2 samples — image + questions vs. ground-truth answers
+    └── test_captioning.py       # COCO samples — image + generated vs. reference captions
+```
 
 ## Configuration
 

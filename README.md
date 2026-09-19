@@ -81,6 +81,7 @@ upgradeable, and `pip` handles the dependencies and the import path.
 
 ```bash
 cd ~/my-project
+git init                          # skip if your project is already a git repository
 git submodule add https://github.com/dbiswas55/vlmhub.git src/_libs/vlmhub
 
 python3 -m venv venv312 && source venv312/bin/activate

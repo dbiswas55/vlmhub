@@ -18,8 +18,6 @@ reply = model.generate([
 print(reply["text"])
 ```
 
-Switching between them is the same two lines with a different client name.
-
 An `ImageBlock` takes an image file (`image_path=`) or a PIL image in memory (`image=`), such as a video frame.
 
 ## Key Features
@@ -57,12 +55,13 @@ pip install -e .
 ```
 
 That covers every hosting — LiteLLM handles Gemini, Vertex AI, OpenAI, Anthropic and all
-OpenAI-compatible local servers, so there are no per-hosting SDKs to add. Two optional extras, or both at once:
+OpenAI-compatible local servers, so there are no per-hosting SDKs to add. Extras exist for
+things not everyone needs:
 
 ```bash
 pip install -e ".[quantization]"   # bitsandbytes, for 4-bit loads under `transformers`
 pip install -e ".[ollama]"         # only to manage Ollama's store via local_models.py
-pip install -e ".[all]"            # both of the above
+pip install -e ".[all]"            # both quantization and ollama
 ```
 
 ### 2. Configure API Keys
@@ -71,7 +70,7 @@ pip install -e ".[all]"            # both of the above
 cp .env.example .env
 ```
 
-Then fill in only what you use — `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GCP_PROJECT`/`GCP_LOCATION`, `HF_TOKEN`/`HF_HOME`. A purely local Ollama or vLLM setup needs none of them.
+Then fill in only what you use — `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GCP_PROJECT`/`GCP_LOCATION`, `HF_TOKEN`/`HF_HOME`. A purely local Ollama or vLLM setup needs none of them. **Different variable names** — edit `api_key_env` in the registry instead.
 
 ### 3. Set Up a Local Backend (Optional)
 
@@ -225,9 +224,6 @@ Most new providers need **no code at all** — add a hosting to `models.json` na
 
 A genuinely new *backend type* — something LiteLLM cannot reach, the way in-process Transformers isn't a wire protocol — means subclassing `BaseBackend` in [`backends.py`](src/vlmhub/backends/backends.py) and registering it in [`get_backend_from_config`](src/vlmhub/backends/__init__.py). See [Adding a New Backend](src/vlmhub/backends/README.md#adding-a-new-backend).
 
-## Scope
-
-vlmhub is about **generation and hosting only** — turning a request into a response, across whichever backend you point it at. Datasets, tasks, prompt templates and multi-step workflows deliberately live outside it, in whatever project consumes this one.
 
 ## License
 

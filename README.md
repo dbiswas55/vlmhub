@@ -25,7 +25,7 @@ An `ImageBlock` takes an image file (`image_path=`) or a PIL image in memory (`i
 - **One interface, every backend** — a single `Model.generate()` call over `TextBlock` and `ImageBlock`, independent of model or backend.
 - **Interleaved multimodal prompts** — mix `TextBlock` and `ImageBlock` in any order; each backend encodes as it needs (base64 data URI over the wire, PIL in-process).
 - **A model registry** — models, settings and generation defaults live in one editable JSON file; give a model any short name you like alongside its real model id.
-- **A hardware-aware Transformers backend** — [LiteLLM](https://docs.litellm.ai) covers most backends, while `transformers` runs a model in-process with an optional 4-bit quantized load and a `fallback_dtype` for pre-Ampere GPUs (e.g. V100) that lack native bfloat16.
+- **A hardware-aware Transformers backend** — `transformers` runs a model in-process with an optional 4-bit quantized load and a `fallback_dtype` for pre-Ampere GPUs (e.g. V100) that lack native bfloat16; [LiteLLM](https://docs.litellm.ai) covers every other hosting.
 
 ## Supported Backends
 
@@ -44,7 +44,13 @@ Pre-configured models include **Gemma 3** (4B, 12B) and **Qwen3-VL** (4B, 8B) ac
 
 ## Quick Start
 
-### 1. Create Environment and Install
+### 1. Install
+
+Pick whichever fits: **A** to try vlmhub out or work on it, **B** to install it as a library into another project.
+
+#### A. Clone the repository
+
+The repo carries the test scripts in [`tests/`](tests/), so this is the way to see it running end to end.
 
 ```bash
 git clone https://github.com/dbiswas55/vlmhub.git
@@ -68,10 +74,50 @@ pip install -e ".[ollama]"         # only to manage Ollama's store via local_mod
 pip install -e ".[all]"            # everything above
 ```
 
+#### B. Install into your own project
+
+Add vlmhub as a submodule, then install it from there. The source sits in your project, readable and
+upgradeable, and `pip` handles the dependencies and the import path.
+
+```bash
+cd ~/my-project
+git submodule add https://github.com/dbiswas55/vlmhub.git src/_libs/vlmhub
+
+python3 -m venv venv312 && source venv312/bin/activate
+pip install -e src/_libs/vlmhub                    # add "[transformers]" for the in-process hosting
+```
+
+Everything vlmhub brings stays inside that one folder:
+
+```
+my-project/
+├── .env                    # your keys
+└── src/_libs/vlmhub/       # the repository, pinned to one commit
+```
+
+Import it anywhere in your project — the editable install handles the path:
+
+```python
+from vlmhub import Model, TextBlock, ImageBlock
+
+model = Model("gemini/flash-3.5")
+```
+
+**Upgrading** — move the submodule to the latest upstream commit:
+
+```bash
+git submodule update --remote --merge src/_libs/vlmhub
+```
+
+Then add and commit it as you would any other change — your repo records the new commit pointer, not
+vlmhub's files. The next run picks up the new code; re-run `pip install -e src/_libs/vlmhub` only when
+an upgrade adds a dependency.
+
 ### 2. Configure API Keys
 
 ```bash
-cp .env.example .env
+cp .env.example .env                    # under A
+cp src/_libs/vlmhub/.env.example .env   # under B
 ```
 
 Then fill in only what you use — `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GCP_PROJECT`/`GCP_LOCATION`, `HF_TOKEN`/`HF_HOME`. A purely local Ollama or vLLM setup needs none of them. **Different variable names** — edit `api_key_env` in the registry instead.
@@ -101,10 +147,11 @@ vllm serve Qwen/Qwen3-VL-4B-Instruct --port 8000
 
 See [`src/vlmhub/backends/README.md`](src/vlmhub/backends/README.md) for the full setup guide, and [`src/vlmhub/utils/local_models.py`](src/vlmhub/utils/local_models.py) for model download utilities.
 
-### 4. Run Inference
+### 4. Try the Example Scripts
 
 The scripts in [`tests/`](tests/) are both smoke tests and usage examples — each downloads a few real
-dataset samples, runs them through a client, and prints the output next to the ground truth:
+dataset samples, runs them through a client, and prints the output next to the ground truth. They
+ship with the repository, so run them from a clone (**A**):
 
 ```bash
 python tests/test_captioning.py                                 # models.json's active client
@@ -195,13 +242,34 @@ The model registry lives in [`src/vlmhub/models.json`](src/vlmhub/models.json), 
 
 **Selecting a client** — pass `"hosting/model"` to `Model(...)`, or set `active` in the registry and call `Model()`. Model-level fields override hosting-level fields, which override `defaults`.
 
-**Extending the registry** — rather than editing the packaged file, pass your own:
+**Editing it in place** works for a quick change. Git keeps your edits, but they land in vlmhub's
+history rather than your project's, and a release that also touches `models.json` blocks the next
+`git submodule update` until you stash or commit them.
 
-```python
-model = Model("my_server/my-model", models_path="my_models.json")
+**Extending the registry** — for anything you mean to keep, pass your own file instead. It holds only
+what you add or change:
+
+```jsonc
+// my_models.json
+{
+  "active": { "hosting": "my_server", "model": "my-finetune" },
+  "defaults": { "temperature": 0.0 },
+  "hostings": {
+    "my_server": {
+      "backend": "litellm",
+      "litellm_prefix": "openai",
+      "api_base": "http://localhost:8000/v1",
+      "models": [{ "name": "my-finetune", "model_id": "org/my-finetuned-vlm" }]
+    }
+  }
+}
 ```
 
-Your file has the same flat shape and is deep-merged over the bundled one, so you can add hostings and models or override individual fields. Lists are replaced wholesale: naming an existing hosting's `models` replaces that hosting's models rather than appending, so add a new hosting key to extend. See [Adding a New Model](src/vlmhub/backends/README.md#adding-a-new-model) and [Adding a New Hosting](src/vlmhub/backends/README.md#adding-a-new-hosting).
+```python
+model = Model("my_server/my-finetune", models_path="my_models.json")
+```
+
+It has the same shape as the bundled file and is deep-merged over it, so you can add hostings and models or override single fields. One catch: lists are replaced, not appended — naming an existing hosting's `models` drops the rest, so add a new hosting key instead. See [Adding a New Model](src/vlmhub/backends/README.md#adding-a-new-model) and [Adding a New Hosting](src/vlmhub/backends/README.md#adding-a-new-hosting).
 
 **Transformers models** take extra per-model fields — `model_class` and `fallback_dtype`, plus an optional `processor_kwargs` — described in [the backend guide](src/vlmhub/backends/README.md#transformers).
 
@@ -210,7 +278,7 @@ Your file has the same flat shape and is deep-merged over the bundled one, so yo
 [`src/vlmhub/utils/local_models.py`](src/vlmhub/utils/local_models.py) manages both the HuggingFace cache and Ollama's store:
 
 ```bash
-python src/vlmhub/utils/local_models.py
+python -m vlmhub.utils.local_models
 ```
 
 | Function | Description |
@@ -228,7 +296,6 @@ Most new providers need **no code at all** — add a hosting to `models.json` na
 
 A genuinely new *backend type* — something LiteLLM cannot reach, the way in-process Transformers isn't a wire protocol — means subclassing `BaseBackend` in [`backends.py`](src/vlmhub/backends/backends.py) and registering it in [`get_backend_from_config`](src/vlmhub/backends/__init__.py). See [Adding a New Backend](src/vlmhub/backends/README.md#adding-a-new-backend).
 
-
 ## License
 
-This project is open source. See [LICENSE](LICENSE) for details.
+Released under the MIT License — see [LICENSE](LICENSE).

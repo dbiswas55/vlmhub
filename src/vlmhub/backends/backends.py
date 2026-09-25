@@ -38,7 +38,11 @@ class BaseBackend(ABC):
 
     @abstractmethod
     def run(self, request: InferenceRequest) -> dict:
-        """Run inference and return ``{"text": str, "logs": list[str]}``."""
+        """Run inference and return ``{"text": str, "logs": list[str], "model": str, "params": dict}``.
+
+        "model" is the model that actually served the request (the provider's reply,
+        where it gives one); "params" holds the generation settings actually sent.
+        """
         ...
 
 
@@ -62,6 +66,7 @@ class LiteLLMBackend(BaseBackend):
         api_base: str | None = None,
         api_key: str | None = None,
         thinking_budget: int | None = None,
+        sampling: bool = True,        # False: the model rejects temperature/top_p/top_k
         vertex_project: str | None = None,
         vertex_location: str | None = None,
     ):
@@ -70,6 +75,7 @@ class LiteLLMBackend(BaseBackend):
         self._api_base = api_base
         self._api_key = api_key
         self._thinking_budget = thinking_budget
+        self._sampling = sampling
         self._vertex_project = vertex_project
         self._vertex_location = vertex_location
 
@@ -77,11 +83,28 @@ class LiteLLMBackend(BaseBackend):
         """Generate text output via LiteLLM's unified completion API."""
         from litellm import completion
 
+        logs: list[str] = []
+        # Only settings that are set, and that this model accepts, go on the wire.
+        params: dict = {}
+        for key in ("temperature", "top_p", "top_k"):
+            value = getattr(request, key)
+            if value is None:
+                continue
+            if self._sampling:
+                params[key] = value
+            else:
+                logs.append(f"DROPPED {key}={value} (model does not accept sampling params)")
+        if request.reasoning_effort is not None:
+            params["reasoning_effort"] = request.reasoning_effort
+        elif self._thinking_budget is not None:
+            # Legacy Gemini 2.5 path: the native param, which also sidesteps
+            # reasoning_effort mapping bugs seen on some vertex_ai/gemini versions.
+            params["thinking"] = {"type": "enabled", "budget_tokens": self._thinking_budget}
+
         kwargs: dict = {
             "model": self.litellm_model,
             "messages": request.to_openai_messages(),
-            "temperature": request.temperature,
-            "top_p": request.top_p,
+            **params,
         }
         if self._api_base:
             kwargs["api_base"] = self._api_base
@@ -93,19 +116,17 @@ class LiteLLMBackend(BaseBackend):
             kwargs["vertex_location"] = self._vertex_location
         if request.max_new_tokens is not None:
             kwargs["max_tokens"] = request.max_new_tokens
-        if self._thinking_budget is not None:
-            # Native param, not reasoning_effort — sidesteps mapping bugs
-            # seen on some vertex_ai/gemini model+version combinations.
-            kwargs["thinking"] = {"type": "enabled", "budget_tokens": self._thinking_budget}
 
         response = completion(**kwargs)
-        logs: list[str] = []
+        served_model = getattr(response, "model", None) or self.litellm_model
+        logs.append(f"MODEL {served_model}")
         usage = getattr(response, "usage", None)
         if usage is not None:
             logs.append(f"USAGE prompt={usage.prompt_tokens} "
                         f"output={usage.completion_tokens} "
                         f"total={usage.total_tokens}")
-        return {"text": response.choices[0].message.content, "logs": logs}
+        return {"text": response.choices[0].message.content, "logs": logs,
+                "model": served_model, "params": params}
 
 
 # ── Transformers (in-process) ─────────────────────────────────────────────────
@@ -378,15 +399,23 @@ class TransformersBackend(BaseBackend):
             processor_kwargs["images"] = all_pil_images
         inputs = self._processor(**processor_kwargs).to(self.device)
 
-        generation_kwargs = {
-            "do_sample": request.do_sample,
-            "temperature": request.temperature if request.do_sample else None,
-            "top_p": request.top_p if request.do_sample else None,
-        }
+        # When sampling, an unset top_p/top_k is left out so the model's generation_config
+        # applies — an explicit None would disable it. Greedy decoding passes None to
+        # silence generate()'s warnings about sampling values it ignores.
+        if request.do_sample:
+            params = {k: v for k in ("temperature", "top_p", "top_k")
+                      if (v := getattr(request, k)) is not None}
+            generation_kwargs = {"do_sample": True, **params}
+        else:
+            params = {}
+            generation_kwargs = {"do_sample": False, "temperature": None, "top_p": None, "top_k": None}
         if request.max_new_tokens is not None:
             generation_kwargs["max_new_tokens"] = request.max_new_tokens
         with torch.no_grad():
             output_ids = self._model.generate(**inputs, **generation_kwargs)
 
         new_ids = output_ids[:, inputs["input_ids"].shape[-1]:]
-        return {"text": self._processor.batch_decode(new_ids, skip_special_tokens=True)[0], "logs": []}
+        logs = ([f"DROPPED reasoning_effort={request.reasoning_effort} (not supported in-process)"]
+                if request.reasoning_effort is not None else [])
+        return {"text": self._processor.batch_decode(new_ids, skip_special_tokens=True)[0], "logs": logs,
+                "model": self.hf_model_id, "params": params}

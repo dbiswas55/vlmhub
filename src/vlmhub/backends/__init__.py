@@ -40,6 +40,7 @@ def get_backend_from_config(client: dict) -> BaseBackend:
             api_base=client.get("api_base"),
             api_key=api_key,
             thinking_budget=client.get("thinking_budget"),
+            sampling=client.get("sampling", True),
             vertex_project=vertex_project,
             vertex_location=vertex_location,
         )

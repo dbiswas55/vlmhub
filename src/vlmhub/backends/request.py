@@ -77,20 +77,25 @@ class InferenceRequest:
 
         InferenceRequest(
             content=[ImageBlock(image_path="slide.png"), TextBlock("What is this?")],
-            system_prompt="", max_new_tokens=4096, temperature=0.3, top_p=1.0,
+            system_prompt="", max_new_tokens=4096, temperature=0.3, top_p=None,
         )
+
+    A None temperature/top_p/top_k/reasoning_effort is left unsent: the provider's (or, in-process,
+    the model's generation_config) default applies.
     """
 
     content: list[ContentBlock]
     system_prompt: str
-    max_new_tokens: int
-    temperature: float
-    top_p: float
+    max_new_tokens: int | None
+    temperature: float | None
+    top_p: float | None
+    top_k: int | None = None
+    reasoning_effort: str | None = None
 
     @property
     def do_sample(self) -> bool:
         """Whether to sample rather than decode greedily — Transformers only."""
-        return self.temperature > 0.0
+        return self.temperature is not None and self.temperature > 0.0
 
     def to_openai_messages(self) -> list[dict]:
         """This request as an OpenAI-style messages list — what LiteLLM

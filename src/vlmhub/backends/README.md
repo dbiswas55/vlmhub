@@ -68,7 +68,7 @@ python src/vlmhub/utils/local_models.py
 
 No server, no local model files — just an API key (above) and a hosting choice in [`models.json`](../models.json):
 
-- **`gemini`** — Gemini via Google AI Studio, on LiteLLM's native `gemini/` provider. Simplest option, and supports `thinking_budget`.
+- **`gemini`** — Gemini via Google AI Studio, on LiteLLM's native `gemini/` provider. Simplest option; 2.5 models take `thinking_budget`, 3.x models take `reasoning_effort`.
 - **`vertex_ai`** — the same Gemini models routed through Vertex AI (needs `GCP_PROJECT`/`GCP_LOCATION` and Application Default Credentials).
 - **`openai`** — OpenAI's own API.
 - **`anthropic`** — Anthropic's own API, on LiteLLM's native `anthropic/` provider.
@@ -180,13 +180,16 @@ The factory joins `litellm_prefix` and `model_id` into LiteLLM's `"<provider>/<m
 
 For credentials: a real secret goes in `api_key_env` (naming an env var, e.g. `"MY_API_KEY"`, filled in your `.env`). An `litellm_prefix: "openai"` hosting with a custom `api_base` and no `api_key_env` — a local OpenAI-compatible server, like `ollama`/`mlx_vlm` above — gets a harmless placeholder key automatically, since those servers want *a* token but don't check it.
 
-Recognized hosting keys: `litellm_prefix`, `api_base`, `api_key_env`, `thinking_budget`, `vertex_project_env`, `vertex_location_env`.
+Recognized hosting keys: `litellm_prefix`, `api_base`, `api_key_env`, `thinking_budget`, `vertex_project_env`, `vertex_location_env`. Each may also be set per model, along with:
+
+- `sampling` — `false` for a model that rejects `temperature`/`top_p`/`top_k`; they are then dropped (and logged) instead of sent.
+- `reasoning_effort` — a default effort level, passed through LiteLLM's `reasoning_effort`. When set, it takes the place of `thinking_budget`.
 
 ## Adding a New Backend
 
 Only needed for something LiteLLM cannot reach at all — a genuinely different execution model, the way `transformers` runs in-process rather than over a wire.
 
-1. Subclass `BaseBackend` in [`backends.py`](backends.py) and implement `run(request) -> dict`, returning `{"text": str, "logs": list[str]}`.
+1. Subclass `BaseBackend` in [`backends.py`](backends.py) and implement `run(request) -> dict`, returning `{"text": str, "logs": list[str], "model": str, "params": dict}`.
 2. Register it in [`__init__.py`](__init__.py): add a branch to `get_backend_from_config` matching on a new `"backend"` value, mapping config keys to constructor arguments.
 3. Add a hosting in [`models.json`](../models.json) with `"backend": "<your new value>"`.
 

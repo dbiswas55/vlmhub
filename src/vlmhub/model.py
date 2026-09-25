@@ -39,13 +39,16 @@ class Model:
         return self.config["name"]
 
     def generate(self, content: list[ContentBlock], system_prompt: str = "", **overrides) -> dict:
-        """Run one request; overrides may set max_new_tokens/temperature/top_p for this call only."""
+        """Run one request; overrides may set max_new_tokens/temperature/top_p/top_k/reasoning_effort
+        for this call only. Returns {"text", "logs", "model", "params"}."""
         request = InferenceRequest(
             content=content,
             system_prompt=system_prompt,
-            max_new_tokens=overrides.get("max_new_tokens", self.config["max_new_tokens"]),
-            temperature=overrides.get("temperature", self.config["temperature"]),
-            top_p=overrides.get("top_p", self.config["top_p"]),
+            max_new_tokens=overrides.get("max_new_tokens", self.config.get("max_new_tokens")),
+            temperature=overrides.get("temperature", self.config.get("temperature")),
+            top_p=overrides.get("top_p", self.config.get("top_p")),
+            top_k=overrides.get("top_k", self.config.get("top_k")),
+            reasoning_effort=overrides.get("reasoning_effort", self.config.get("reasoning_effort")),
         )
         return self.backend.run(request)
 

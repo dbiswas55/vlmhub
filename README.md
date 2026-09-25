@@ -35,7 +35,7 @@ An `ImageBlock` takes an image file (`image_path=`) or a PIL image in memory (`i
 | **Local Server** | MLX-VLM | `mlx_vlm` | `litellm` | Apple Silicon, port 8080 |
 | **Local Server** | vLLM | `vllm` | `litellm` | CUDA GPU, port 8000 |
 | **In-Process** | HuggingFace Transformers | `transformers` | `transformers` | Direct model loading (CUDA / MPS / CPU) |
-| **Cloud API** | Google Gemini (AI Studio) | `gemini` | `litellm` | LiteLLM `gemini/` provider; supports `thinking_budget` |
+| **Cloud API** | Google Gemini (AI Studio) | `gemini` | `litellm` | LiteLLM `gemini/` provider; `thinking_budget` (2.5) or `reasoning_effort` (3.x) |
 | **Cloud API** | Google Gemini via Vertex AI | `vertex_ai` | `litellm` | LiteLLM `vertex_ai/`, Application Default Credentials |
 | **Cloud API** | OpenAI | `openai` | `litellm` | GPT-4o, GPT-4o-mini, GPT-4.1 |
 | **Cloud API** | Anthropic | `anthropic` | `litellm` | LiteLLM `anthropic/` provider |
@@ -182,14 +182,19 @@ response = model.generate(
 )
 
 print(response["text"])              # the generation
-print(response["logs"])              # e.g. ["USAGE prompt=288 output=304 total=592"]
+print(response["logs"])              # e.g. ["MODEL gemma3:4b", "USAGE prompt=288 output=304 total=592"]
+print(response["model"])             # the model that actually served the request
+print(response["params"])            # the generation settings actually sent, e.g. {"temperature": 0.3}
 ```
 
 Generation parameters come from the registry (`defaults`, overridden per hosting, then per model) and can be overridden for one call:
 
 ```python
-response = model.generate(content, max_new_tokens=1024, temperature=0.0, top_p=1.0)
+response = model.generate(content, max_new_tokens=1024, temperature=0.0, top_p=1.0,
+                          top_k=40, reasoning_effort="medium")
 ```
+
+A `None` value is not sent, so the provider's default applies (for Transformers, the model's own `generation_config`); `top_p`, `top_k` and `reasoning_effort` are `None` by default. `reasoning_effort` (`"low"`, `"medium"`, `"high"`, …) is mapped by LiteLLM to each provider's own control: effort on Claude, `thinking_level` on Gemini 3, `reasoning_effort` on OpenAI. Models marked `"sampling": false` in the registry reject `temperature`/`top_p`/`top_k` (e.g. Claude Sonnet 5, Opus 4.8+, GPT-5.6); those values are dropped for them, with a `DROPPED ...` line in `logs`, and `params` shows what was really sent. For reproducible runs, prefer dated model IDs where the provider offers them and record `model` and `params` with each result.
 
 Useful properties: `model.name` (`"ollama/gemma3-4b"`), `model.model_id` (`"gemma3:4b"`), `model.short_name` (`"gemma3-4b"`), and `model.report()` to print both.
 
@@ -225,7 +230,7 @@ The model registry lives in [`src/vlmhub/models.json`](src/vlmhub/models.json), 
 ```jsonc
 {
   "active": { "hosting": "ollama", "model": "gemma3-4b" },      // default client
-  "defaults": { "max_new_tokens": 4096, "temperature": 0.3, "top_p": 1.0 },
+  "defaults": { "max_new_tokens": 4096, "temperature": 0.3, "top_p": null, "top_k": null, "reasoning_effort": null },
   "hostings": {
     "ollama": {
       "backend": "litellm",

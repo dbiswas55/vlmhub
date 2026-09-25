@@ -9,26 +9,30 @@
   "defaults": {
     "max_new_tokens": 4096,
     "temperature": 0.3,
-    "top_p": 1.0
+    "top_p": null,
+    "top_k": null,
+    "reasoning_effort": null
   },
 
   "hostings": {
 
     "_comment_api": "── Cloud APIs ────────────────────────────────────────────────",
+    "_comment_api_tokens": "Cloud hostings raise max_new_tokens to 16000 (reasoning models count thinking tokens against it). A model with sampling=false rejects temperature/top_p/top_k, so they are dropped.",
 
     "gemini": {
-      "_comment": "Google AI Studio, via LiteLLM's native 'gemini/' provider. Supports thinking_budget.",
+      "_comment": "Google AI Studio, via LiteLLM's native 'gemini/' provider. 2.5 models take thinking_budget; 3.x models take reasoning_effort (mapped to thinking_level).",
       "backend": "litellm",
       "litellm_prefix": "gemini",
       "api_key_env": "GEMINI_API_KEY",
+      "max_new_tokens": 16000,
       "models": [
         { "name": "flash-2.5",      "model_id": "gemini-2.5-flash", "thinking_budget": 0 },
-        { "name": "flash-3.5",      "model_id": "gemini-3.5-flash", "thinking_budget": 0 },
-        { "name": "flash-3.5lite",  "model_id": "gemini-3.5-flash-lite", "thinking_budget": 0 },
-        { "name": "flash-3.6",      "model_id": "gemini-3.6-flash", "thinking_budget": 0 },
-        { "name": "flash-3.8",      "model_id": "gemini-3.8-flash", "thinking_budget": 0 },
-        { "name": "pro-2.5",        "model_id": "gemini-2.5-pro", "thinking_budget": -1, "max_new_tokens": null },
-        { "name": "pro-3.1preview", "model_id": "gemini-3.1-pro-preview", "thinking_budget": -1, "max_new_tokens": null }
+        { "name": "flash-3.5",      "model_id": "gemini-3.5-flash" },
+        { "name": "flash-3.5lite",  "model_id": "gemini-3.5-flash-lite" },
+        { "name": "flash-3.6",      "model_id": "gemini-3.6-flash" },
+        { "name": "flash-3.8",      "model_id": "gemini-3.8-flash" },
+        { "name": "pro-2.5",        "model_id": "gemini-2.5-pro", "thinking_budget": -1 },
+        { "name": "pro-3.1preview", "model_id": "gemini-3.1-pro-preview" }
       ]
     },
 
@@ -38,14 +42,15 @@
       "litellm_prefix": "vertex_ai",
       "vertex_project_env": "GCP_PROJECT",
       "vertex_location_env": "GCP_LOCATION",
+      "max_new_tokens": 16000,
       "models": [
         { "name": "flash-2.5",      "model_id": "gemini-2.5-flash", "thinking_budget": 0 },
-        { "name": "flash-3.5",      "model_id": "gemini-3.5-flash", "thinking_budget": 0 },
-        { "name": "flash-3.5lite",  "model_id": "gemini-3.5-flash-lite", "thinking_budget": 0 },
-        { "name": "flash-3.6",      "model_id": "gemini-3.6-flash", "thinking_budget": 0 },
-        { "name": "flash-3.8",      "model_id": "gemini-3.8-flash", "thinking_budget": 0 },
-        { "name": "pro-2.5",        "model_id": "gemini-2.5-pro", "thinking_budget": -1, "max_new_tokens": null },
-        { "name": "pro-3.1preview", "model_id": "gemini-3.1-pro-preview", "thinking_budget": -1, "max_new_tokens": null }
+        { "name": "flash-3.5",      "model_id": "gemini-3.5-flash" },
+        { "name": "flash-3.5lite",  "model_id": "gemini-3.5-flash-lite" },
+        { "name": "flash-3.6",      "model_id": "gemini-3.6-flash" },
+        { "name": "flash-3.8",      "model_id": "gemini-3.8-flash" },
+        { "name": "pro-2.5",        "model_id": "gemini-2.5-pro", "thinking_budget": -1 },
+        { "name": "pro-3.1preview", "model_id": "gemini-3.1-pro-preview" }
       ]
     },
 
@@ -54,10 +59,13 @@
       "backend": "litellm",
       "litellm_prefix": "openai",
       "api_key_env": "OPENAI_API_KEY",
+      "max_new_tokens": 16000,
       "models": [
-        { "name": "gpt-4o",      "model_id": "gpt-4o" },
-        { "name": "gpt-4o-mini", "model_id": "gpt-4o-mini" },
-        { "name": "gpt-4.1",     "model_id": "gpt-4.1" }
+        { "name": "gpt-4o",      "model_id": "gpt-4o-2024-08-06" },
+        { "name": "gpt-4o-mini", "model_id": "gpt-4o-mini-2024-07-18" },
+        { "name": "gpt-4.1",     "model_id": "gpt-4.1-2025-04-14" },
+        { "name": "gpt-5.4",     "model_id": "gpt-5.4-2026-03-05" },
+        { "name": "gpt-5.6-sol", "model_id": "gpt-5.6-sol", "sampling": false }
       ]
     },
 
@@ -66,10 +74,14 @@
       "backend": "litellm",
       "litellm_prefix": "anthropic",
       "api_key_env": "ANTHROPIC_API_KEY",
+      "max_new_tokens": 16000,
       "models": [
-        { "name": "haiku-3",    "model_id": "claude-3-haiku-20240307" },
-        { "name": "sonnet-3.5", "model_id": "claude-3-5-sonnet-20241022" },
-        { "name": "sonnet-3.7", "model_id": "claude-3-7-sonnet-20250219" }
+        { "name": "haiku-4.5",  "model_id": "claude-haiku-4-5" },
+        { "name": "sonnet-4.6", "model_id": "claude-sonnet-4-6" },
+        { "name": "sonnet-5",   "model_id": "claude-sonnet-5", "sampling": false },
+        { "name": "opus-4.8",   "model_id": "claude-opus-4-8", "sampling": false },
+        { "name": "opus-5",     "model_id": "claude-opus-5", "sampling": false },
+        { "name": "opus-5.5",   "model_id": "claude-opus-5-5", "sampling": false }
       ]
     },
 

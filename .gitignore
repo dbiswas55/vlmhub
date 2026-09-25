@@ -20,3 +20,6 @@ __pycache__/
 *.egg-info/
 build/
 dist/
+
+# Slurm job logs (test_vllm.sh)
+*.o[0-9]*

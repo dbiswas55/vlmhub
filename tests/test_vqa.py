@@ -95,10 +95,11 @@ def ensure_samples(out_dir: Path, n: int = 3, q_per_sample: int = QUESTIONS_PER_
     return samples
 
 
-def run(sample_dir: Path, client_name: str = "", n: int = 3) -> None:
+def run(sample_dir: Path, client_name: str = "", n: int = 3,
+        models_path: Path | None = None) -> None:
     samples = ensure_samples(sample_dir, n)
 
-    model = Model(client_name)
+    model = Model(client_name, models_path=models_path)
     model.report()
 
     # --- ask the model each question and compare to ground truth ---
@@ -117,5 +118,6 @@ if __name__ == "__main__":
     ap.add_argument("--sample", default="input/vqa_samples", type=Path)
     ap.add_argument("--client", default="", help='e.g. "ollama/gemma3-4b"; blank uses models.json\'s "active" client')
     ap.add_argument("--n", default=3, type=int)
+    ap.add_argument("--models-path", type=Path, default=None, help="registry override JSON, merged over the bundled one")
     args = ap.parse_args()
-    run(args.sample, args.client, args.n)
+    run(args.sample, args.client, args.n, args.models_path)

@@ -35,6 +35,10 @@ CLIENTS = [
     # "anthropic/sonnet-4.6",
     # "anthropic/sonnet-5",
 
+    # "gemini/gemma4-26b-a4b",
+
+    # "openrouter/haiku-4.5",
+
     # "ollama/gemma3-4b",
 ]
 PROMPT = "Write a one-sentence summary of this image."

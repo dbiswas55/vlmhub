@@ -50,6 +50,7 @@ HF_HOME=.cache/huggingface     # optional; use absolute path on a cluster
 GEMINI_API_KEY=...             # for the gemini hosting
 OPENAI_API_KEY=...             # for the openai hosting
 ANTHROPIC_API_KEY=...          # for the anthropic hosting
+OPENROUTER_API_KEY=...         # for the openrouter hosting
 GCP_PROJECT=...                # for the vertex_ai hosting
 GCP_LOCATION=...               # for the vertex_ai hosting
 ```
@@ -72,6 +73,7 @@ No server, no local model files — just an API key (above) and a hosting choice
 - **`vertex_ai`** — the same Gemini models routed through Vertex AI (needs `GCP_PROJECT`/`GCP_LOCATION` and Application Default Credentials).
 - **`openai`** — OpenAI's own API.
 - **`anthropic`** — Anthropic's own API, on LiteLLM's native `anthropic/` provider.
+- **`openrouter`** — GPT, Claude and Gemini through one `OPENROUTER_API_KEY`. Model IDs are OpenRouter's own (e.g. `anthropic/claude-haiku-4.5`).
 
 ## Local Models
 

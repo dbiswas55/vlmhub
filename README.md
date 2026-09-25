@@ -37,10 +37,11 @@ An `ImageBlock` takes an image file (`image_path=`) or a PIL image in memory (`i
 | **In-Process** | HuggingFace Transformers | `transformers` | `transformers` | Direct model loading (CUDA / MPS / CPU) |
 | **Cloud API** | Google Gemini (AI Studio) | `gemini` | `litellm` | LiteLLM `gemini/` provider; `thinking_budget` (2.5) or `reasoning_effort` (3.x) |
 | **Cloud API** | Google Gemini via Vertex AI | `vertex_ai` | `litellm` | LiteLLM `vertex_ai/`, Application Default Credentials |
-| **Cloud API** | OpenAI | `openai` | `litellm` | GPT-4o, GPT-4o-mini, GPT-4.1 |
+| **Cloud API** | OpenAI | `openai` | `litellm` | GPT-4o, GPT-4o-mini, GPT-4.1, GPT-5.x |
 | **Cloud API** | Anthropic | `anthropic` | `litellm` | LiteLLM `anthropic/` provider |
+| **Cloud API** | OpenRouter | `openrouter` | `litellm` | GPT, Claude and Gemini with one key |
 
-Pre-configured models include **Gemma 3** (4B, 12B) and **Qwen3-VL** (4B, 8B) across all local hostings — plus Qwen2.5-VL, InternVL3.5, mPLUG-Owl3, Molmo2, Idefics3 and LLaVA-OneVision under `transformers` — and Gemini (2.5 / 3.x), GPT-4o/4.1, and Claude 3.x for cloud.
+Pre-configured models include **Gemma 3** (4B, 12B) and **Qwen3-VL** (4B, 8B) across all local hostings — plus Qwen2.5-VL, InternVL3.5, mPLUG-Owl3, Molmo2, Idefics3 and LLaVA-OneVision under `transformers` — and Gemini (2.5 / 3.x), GPT-4o/4.1/5.x, Claude 4.5+ and Gemma 4 (via Gemini) for cloud.
 
 ## Quick Start
 
@@ -121,7 +122,7 @@ cp .env.example .env                    # under A
 cp src/_libs/vlmhub/.env.example .env   # under B
 ```
 
-Then fill in only what you use — `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GCP_PROJECT`/`GCP_LOCATION`, `HF_TOKEN`/`HF_HOME`. A purely local Ollama or vLLM setup needs none of them. **Different variable names** — edit `api_key_env` in the registry instead.
+Then fill in only what you use — `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `GCP_PROJECT`/`GCP_LOCATION`, `HF_TOKEN`/`HF_HOME`. A purely local Ollama or vLLM setup needs none of them. **Different variable names** — edit `api_key_env` in the registry instead.
 
 ### 3. Set Up a Local Backend (Optional)
 
@@ -241,7 +242,7 @@ The model registry lives in [`src/vlmhub/models.json`](src/vlmhub/models.json), 
         // ...
       ]
     }
-    // gemini, vertex_ai, openai, anthropic, mlx_vlm, vllm, transformers ...
+    // gemini, vertex_ai, openai, anthropic, openrouter, mlx_vlm, vllm, transformers ...
   }
 }
 ```

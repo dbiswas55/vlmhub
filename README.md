@@ -41,7 +41,7 @@ An `ImageBlock` takes an image file (`image_path=`) or a PIL image in memory (`i
 | **Cloud API** | Anthropic | `anthropic` | `litellm` | LiteLLM `anthropic/` provider |
 | **Cloud API** | OpenRouter | `openrouter` | `litellm` | GPT, Claude and Gemini with one key |
 
-Pre-configured models include **Gemma 3** (4B, 12B) and **Qwen3-VL** (4B, 8B) across all local hostings — plus Qwen2.5-VL, InternVL3.5, mPLUG-Owl3, Molmo2, Idefics3 and LLaVA-OneVision under `transformers` — and Gemini (2.5 / 3.x), GPT-4o/4.1/5.x, Claude 4.5+ and Gemma 4 (via Gemini) for cloud.
+Pre-configured models include **Gemma 3** (4B, 12B) and **Qwen3-VL** (4B, 8B) across all local hostings — plus Qwen2.5-VL, InternVL3.5, mPLUG-Owl3, Molmo2, Idefics3 and LLaVA-OneVision under `transformers` — open-weight judges (Qwen3.6/3.8, Prometheus, CompassJudger, UnifiedReward, gpt-oss) under `vllm`, and Gemini (2.5 / 3.x), GPT-4o/4.1/5.x, Claude 4.5+ and Gemma 4 (via Gemini) for cloud.
 
 ## Quick Start
 
@@ -151,15 +151,18 @@ See [`src/vlmhub/backends/README.md`](src/vlmhub/backends/README.md) for the ful
 
 ### 4. Try the Example Scripts
 
-The scripts in [`tests/`](tests/) are both smoke tests and usage examples — each downloads a few real
-dataset samples, runs them through a client, and prints the output next to the ground truth. They
-ship with the repository, so run them from a clone (**A**):
+The scripts in [`tests/`](tests/) are both smoke tests and usage examples — the task scripts download a
+few real dataset samples, run them through a client, and print the output next to the ground truth;
+`test_judge.py` grades built-in answers as an LLM judge. They ship with the repository, so run them
+from a clone (**A**):
 
 ```bash
-python tests/test_captioning.py                                 # models.json's active client
-python tests/test_vqa.py --client ollama/gemma3-4b
-python tests/test_vqa.py --client gemini/flash-2.5 --n 5
-python tests/test_captioning.py --client transformers/gemma3-4b
+python tests/test_task_captioning.py                                 # models.json's active client
+python tests/test_task_vqa.py --client ollama/gemma3-4b
+python tests/test_task_vqa.py --client gemini/flash-2.5 --n 5
+python tests/test_task_captioning.py --client transformers/gemma3-4b
+python tests/test_judge.py --client openai/gpt-4o-mini               # text-only judge check
+sbatch test_vllm.sh qwen3vl-4b                                       # Slurm: serve a vllm model, run the tests
 ```
 
 ## Usage
@@ -207,6 +210,7 @@ Images are encoded automatically — base64 data URI for every API-hosted backen
 vlmhub/
 ├── pyproject.toml
 ├── .env.example                 # API keys and HF token (copy to .env)
+├── test_vllm.sh                 # Slurm job: serve a vllm model, run tests/ against it
 ├── src/vlmhub/
 │   ├── __init__.py              # Public API: Model, Config, TextBlock, ImageBlock, …
 │   ├── models.json              # The model/hosting registry
@@ -220,8 +224,10 @@ vlmhub/
 │       ├── request.py           # TextBlock, ImageBlock, InferenceRequest
 │       └── README.md            # Backend setup guide
 └── tests/
-    ├── test_vqa.py              # VQAv2 samples — image + questions vs. ground-truth answers
-    └── test_captioning.py       # COCO samples — image + generated vs. reference captions
+    ├── test_task_vqa.py         # VQAv2 samples — image + questions vs. ground-truth answers
+    ├── test_task_captioning.py  # COCO samples — image + generated vs. reference captions
+    ├── test_clients.py          # One image, one prompt — checks a list of clients end to end
+    └── test_judge.py            # Built-in answers graded on a 1-5 rubric vs. expected scores
 ```
 
 ## Configuration

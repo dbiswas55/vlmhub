@@ -1,6 +1,6 @@
 """
-test_vqa.py
-============
+test_task_vqa.py
+=================
 Downloads a few real image+questions+answers samples from the VQAv2 dataset
 (lmms-lab-encoder/VQAv2 on the HF Hub) into <out_dir>/sample_XX/, skipping
 any sample already downloaded, then asks vlmhub's Model to answer each
@@ -16,8 +16,8 @@ Each sample is its own subfolder:
 
 Usage
 -----
-    python tests/test_vqa.py
-    python tests/test_vqa.py --sample input/vqa_samples --client ollama/gemma3-4b --n 3
+    python tests/test_task_vqa.py
+    python tests/test_task_vqa.py --sample input/vqa_samples --client ollama/gemma3-4b --n 3
 """
 
 from __future__ import annotations

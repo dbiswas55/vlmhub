@@ -2,7 +2,7 @@
 test_clients.py
 ================
 Smoke-tests a list of clients: sends each one the same COCO image (reusing
-test_captioning's samples) with a one-sentence summary prompt, and reports
+test_task_captioning's samples) with a one-sentence summary prompt, and reports
 which clients work, the model that served them, and the params actually sent.
 
 Usage
@@ -19,7 +19,7 @@ import time
 from pathlib import Path
 
 from vlmhub import Model, TextBlock, ImageBlock
-from test_captioning import ensure_samples
+from test_task_captioning import ensure_samples
 
 CLIENTS = [
     "vertex_ai/flash-3.5lite",

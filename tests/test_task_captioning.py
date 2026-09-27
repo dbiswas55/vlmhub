@@ -1,6 +1,6 @@
 """
-test_captioning.py
-====================
+test_task_captioning.py
+========================
 Downloads a few real image+captions samples from the COCO Captions dataset
 (jxie/coco_captions on the HF Hub) into <out_dir>/sample_XX/, skipping any
 sample already downloaded, then asks vlmhub's Model to summarize each image
@@ -16,8 +16,8 @@ Each sample is its own subfolder:
 
 Usage
 -----
-    python tests/test_captioning.py
-    python tests/test_captioning.py --sample input/coco_samples --client ollama/gemma3-4b --n 3
+    python tests/test_task_captioning.py
+    python tests/test_task_captioning.py --sample input/coco_samples --client ollama/gemma3-4b --n 3
 """
 
 from __future__ import annotations

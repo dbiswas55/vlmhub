@@ -135,15 +135,31 @@
     },
 
     "vllm": {
-      "_comment": "Uses same HuggingFace model IDs as transformers.",
+      "_comment": "HuggingFace model IDs, each served by `vllm serve <model_id>`.",
+      "_comment_dtype": "vLLM picks the dtype: bf16 where supported; on V100 (below sm_80) fp16, or fp32 for models it bans from fp16 (Gemma 2/3).",
+      "_comment_notes": "Flags in notes are extra `vllm serve` flags, not fields here.",
+      "_comment_tokens": "max_new_tokens: the 4096 default, 8192 on reasoning models (thinking counts against it); prompt + output must fit --max-model-len (32768 in test_vllm.sh).",
       "backend": "litellm",
       "litellm_prefix": "hosted_vllm",
       "api_base": "http://127.0.0.1:8000/v1",
       "models": [
-        { "name": "gemma3-4b",   "model_id": "google/gemma-3-4b-it" },
-        { "name": "gemma3-12b",  "model_id": "google/gemma-3-12b-it" },
-        { "name": "qwen3vl-4b",  "model_id": "Qwen/Qwen3-VL-4B-Instruct" },
-        { "name": "qwen3vl-8b",  "model_id": "Qwen/Qwen3-VL-8B-Instruct" }
+        { "name": "gemma3-4b",            "model_id": "google/gemma-3-4b-it",                     "notes": ["V100: fp16 banned for Gemma 3, so fp32 (~17GB) → needs a 32GB card"] },
+        { "name": "gemma3-12b",           "model_id": "google/gemma-3-12b-it",                    "notes": ["V100: fp16 banned for Gemma 3, so fp32 (~48GB) → fits no single card, use L40S"] },
+        { "name": "qwen3vl-4b",           "model_id": "Qwen/Qwen3-VL-4B-Instruct" },
+        { "name": "qwen3vl-8b",           "model_id": "Qwen/Qwen3-VL-8B-Instruct" },
+
+        { "name": "qwen3.6-27b",          "model_id": "Qwen/Qwen3.6-27B-FP8",                     "max_new_tokens": 8192,  "notes": ["FP8 (~31GB): needs sm_75+ → L40S, not V100", "thinks by default → serve with --reasoning-parser qwen3 (answer only) or --default-chat-template-kwargs '{\"enable_thinking\": false}' (no thinking)"] },
+        { "name": "qwen3.6-35b-a3b",      "model_id": "Qwen/Qwen3.6-35B-A3B-FP8",                 "max_new_tokens": 8192,  "notes": ["FP8 (~38GB): needs sm_75+, and tight on one 48GB L40S → use 2 GPUs (--tensor-parallel-size 2)", "thinks by default → serve with --reasoning-parser qwen3 (answer only) or --default-chat-template-kwargs '{\"enable_thinking\": false}' (no thinking)"] },
+        { "name": "qwen3.8-27b",          "model_id": "Qwen/Qwen3.8-27B-FP8",                     "max_new_tokens": 8192,  "notes": ["FP8 (~31GB): needs sm_75+ → L40S, not V100", "thinks by default → serve with --reasoning-parser qwen3 (answer only) or --default-chat-template-kwargs '{\"enable_thinking\": false}' (no thinking)"] },
+
+        { "name": "unifiedreward-2.0-7b", "model_id": "CodeGoat24/UnifiedReward-2.0-qwen-7b",     "notes": ["vision judge (Qwen2.5-VL-7B, ~16.6GB bf16) → scores one answer or compares two; prompt format on its model card", "V100: fp16 (~16.6GB) → needs a 32GB card"] },
+
+        { "name": "prometheus-7b",        "model_id": "prometheus-eval/prometheus-7b-v2.0",       "notes": ["text-only judge (Mistral-7B, ~14.5GB bf16) → no images", "V100: fp16 (~14.5GB) → needs a 32GB card"] },
+        { "name": "m-prometheus-14b",     "model_id": "Unbabel/M-Prometheus-14B",                 "notes": ["text-only multilingual judge (Qwen2.5-14B, ~29.5GB bf16) → no images; prometheus-7b's prompt format", "V100: fp16 (~29.5GB) → fits no single card, use L40S"] },
+        { "name": "compassjudger-2-32b",  "model_id": "opencompass/CompassJudger-2-32B-Instruct", "notes": ["text-only judge (Qwen2.5-32B, ~65.5GB bf16) → no images", "too big for one 48GB L40S → use 2 GPUs (--tensor-parallel-size 2)"] },
+
+        { "name": "gpt-oss-20b",          "model_id": "openai/gpt-oss-20b",                       "max_new_tokens": 8192,  "notes": ["text-only (MXFP4, ~13.8GB): needs sm_80+ → L40S, not V100", "reasoning model → vLLM returns only the answer, no parser flag needed"] },
+        { "name": "gpt-oss-120b",         "model_id": "openai/gpt-oss-120b",                      "max_new_tokens": 8192,  "notes": ["text-only (MXFP4, ~65.2GB): needs sm_80+, and too big for one 48GB L40S → use 2 GPUs (--tensor-parallel-size 2)", "reasoning model → vLLM returns only the answer, no parser flag needed"] }
       ]
     },
 
@@ -157,7 +173,7 @@
       "quantization_level": null,
       "models": [
         { "name": "gemma3-4b",     "model_id": "google/gemma-3-4b-it",                       "model_class": "AutoModelForImageTextToText", "fallback_dtype": null, "notes": ["no safe fp16 fallback: fp16 overflows into NaN logits; runs emulated bf16 on V100"] },
-        { "name": "gemma3-12b",    "model_id": "google/gemma-3-12b-it",                      "model_class": "AutoModelForImageTextToText", "fallback_dtype": null, "notes": ["no safe fp16 fallback: fp16 overflows into NaN logits; runs emulated bf16 on V100", "~24GB in bf16 does not fit a 16GB V100 -- that card needs quantization_level '4bit'"] },
+        { "name": "gemma3-12b",    "model_id": "google/gemma-3-12b-it",                      "model_class": "AutoModelForImageTextToText", "fallback_dtype": null, "notes": ["no safe fp16 fallback: fp16 overflows into NaN logits; runs emulated bf16 on V100", "~24GB in bf16 does not fit a 16GB V100 → that card needs quantization_level '4bit'"] },
         { "name": "qwen3vl-4b",    "model_id": "Qwen/Qwen3-VL-4B-Instruct",                  "model_class": "AutoModelForImageTextToText", "fallback_dtype": "float16" },
         { "name": "qwen3vl-8b",    "model_id": "Qwen/Qwen3-VL-8B-Instruct",                  "model_class": "AutoModelForImageTextToText", "fallback_dtype": "float16" },
         { "name": "qwen25vl-7b",   "model_id": "Qwen/Qwen2.5-VL-7B-Instruct",                "model_class": "AutoModelForImageTextToText", "fallback_dtype": "float16" },

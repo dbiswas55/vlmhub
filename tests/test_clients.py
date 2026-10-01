@@ -40,6 +40,21 @@ CLIENTS = [
 
     # "openrouter/haiku-4.5",
 
+    # OpenRouter open weights: small VLMs, then larger / judge candidates
+    "openrouter/gemma-3-4b",
+    "openrouter/gemma-3-12b",
+    "openrouter/ministral-8b",
+    "openrouter/qwen3-vl-8b",
+    "openrouter/mimo-v2.6-pro",
+    "openrouter/glm-5.3-flash",
+    "openrouter/deepseek-v4.1-flash",
+    "openrouter/llama-4-maverick",
+    # "openrouter/gemma-4-31b",
+    # "openrouter/qwen3.8-27b",
+    # free: rate-limited
+    # "openrouter/gemma-4-31b-free",
+    # "openrouter/qwen3.8-27b-free",
+
     # "ollama/gemma3-4b",
 ]
 PROMPT = "Write a one-sentence summary of this image."
